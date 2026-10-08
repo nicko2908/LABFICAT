@@ -17,6 +17,13 @@ const Parametro = require('./laboratorio/Parametro');
 const EtapaProceso = require('./laboratorio/EtapaProceso');
 const Analisis = require('./laboratorio/Analisis');
 
+// Servicios
+const Solicitud = require('./servicios/Solicitud');
+const HistorialEstadoSolicitud = require('./servicios/HistorialEstadoSolicitud');
+const Cotizacion = require('./servicios/Cotizacion');
+const CuponPago = require('./servicios/CuponPago');
+const SoportePago = require('./servicios/SoportePago');
+
 // Sistema
 const ConfiguracionSistema = require('./sistema/ConfiguracionSistema');
 
@@ -29,5 +36,10 @@ module.exports = {
   Parametro,
   EtapaProceso,
   Analisis,
+  Solicitud,
+  HistorialEstadoSolicitud,
+  Cotizacion,
+  CuponPago,
+  SoportePago,
   ConfiguracionSistema,
 };

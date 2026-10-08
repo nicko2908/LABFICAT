@@ -14,6 +14,7 @@
  *  - Nunca se elimina: se desactiva con "activo" (RF-25).
  */
 const mongoose = require('mongoose');
+const { LIMITES } = require('../../config/constants');
 
 const UNIDADES_CANTIDAD = ['ml', 'gr'];
 
@@ -24,7 +25,7 @@ const analisisSchema = new mongoose.Schema(
 
     tarifa_externo: { type: Number, required: true, default: 15000, min: 0 },
 
-    cantidad_minima: { type: Number, default: null, min: 0 },
+    cantidad_minima: { type: Number, default: LIMITES.CANTIDAD_MINIMA_MUESTRA, min: 0 },
     unidad_cantidad: { type: String, enum: UNIDADES_CANTIDAD, default: null },
 
     parametros: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Parametro' }],

@@ -26,7 +26,6 @@ const env = {
   },
 
   negocio: {
-    cuponVigenciaDias: Number(process.env.CUPON_VIGENCIA_DIAS) || 15,
     cuponUmbralRecordatorioDias: Number(process.env.CUPON_UMBRAL_RECORDATORIO_DIAS) || 5,
     tokenRecuperacionMinutos: Number(process.env.TOKEN_RECUPERACION_MINUTOS) || 30,
   },
