@@ -1,0 +1,97 @@
+/**
+ * Constantes del sistema: enums y estados alineados al modelo de datos.
+ * Se usan para no escribir "strings magicos" en el codigo.
+ */
+
+const ROLES = {
+  CLIENTE: 'cliente',
+  ANALISTA: 'analista',
+  COORDINADOR: 'coordinador',
+};
+
+const TIPO_CLIENTE = {
+  INTERNO: 'INTERNO',
+  EXTERNO: 'EXTERNO',
+};
+
+const ESTADO_SOLICITUD = {
+  REGISTRADA: 'Registrada',
+  COTIZADA: 'Cotizada',
+  ACEPTADA: 'Aceptada',
+  DESISTIDA: 'Desistida',
+  PAGO_PENDIENTE_VERIFICACION: 'Pago pendiente de verificacion',
+  PAGO_APROBADO: 'Pago aprobado',
+  PAGO_RECHAZADO: 'Pago rechazado',
+  EN_ANALISIS: 'En analisis',
+  INFORME_LISTO: 'Informe listo',
+  FINALIZADA: 'Finalizada',
+  CERRADA: 'Cerrada',
+};
+
+const ESTADO_COTIZACION = {
+  PENDIENTE: 'PENDIENTE',
+  ACEPTADA: 'ACEPTADA',
+  RECHAZADA: 'RECHAZADA',
+};
+
+const ESTADO_CUPON = {
+  PENDIENTE: 'PENDIENTE',
+  GENERADO: 'GENERADO',
+  UTILIZADO: 'UTILIZADO',
+  VENCIDO: 'VENCIDO',
+};
+
+const ESTADO_SOPORTE_PAGO = {
+  PENDIENTE_VERIFICACION: 'PENDIENTE_VERIFICACION',
+  APROBADO: 'APROBADO',
+  RECHAZADO: 'RECHAZADO',
+};
+
+const ESTADO_ORDEN = {
+  PENDIENTE: 'PENDIENTE',
+  EN_PROCESO: 'EN_PROCESO',
+  FINALIZADA: 'FINALIZADA',
+  INVALIDADA: 'INVALIDADA',
+};
+
+const ESTADO_RECEPCION_MUESTRA = {
+  ACEPTADA: 'ACEPTADA',
+  RECHAZADA: 'RECHAZADA',
+};
+
+const PRIORIDAD = {
+  ALTA: 1,
+  MEDIA: 3,
+  BAJA: 5,
+};
+
+const ESTADO_RECLAMACION = {
+  ABIERTA: 'ABIERTA',
+  RESUELTA: 'RESUELTA',
+};
+
+const FORMATOS_SOPORTE = ['PDF', 'JPG', 'PNG'];
+const FORMATOS_EVIDENCIA = ['PNG', 'JPG', 'JPEG'];
+
+const LIMITES = {
+  SOPORTE_PAGO_MAX_MB: 5,
+  EVIDENCIA_MAX_MB: 5,
+  EVIDENCIA_MAX_ARCHIVOS: 5,
+  RECLAMACION_DIAS_HABILES: 5,
+};
+
+module.exports = {
+  ROLES,
+  TIPO_CLIENTE,
+  ESTADO_SOLICITUD,
+  ESTADO_COTIZACION,
+  ESTADO_CUPON,
+  ESTADO_SOPORTE_PAGO,
+  ESTADO_ORDEN,
+  ESTADO_RECEPCION_MUESTRA,
+  PRIORIDAD,
+  ESTADO_RECLAMACION,
+  FORMATOS_SOPORTE,
+  FORMATOS_EVIDENCIA,
+  LIMITES,
+};

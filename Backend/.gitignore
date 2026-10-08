@@ -1,0 +1,22 @@
+# Dependencias
+node_modules/
+
+# Variables de entorno
+.env
+.env.local
+.env.*.local
+
+# Archivos generados y subidos (datos, no codigo)
+storage/
+!storage/**/.gitkeep
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Sistema operativo / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
