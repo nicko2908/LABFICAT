@@ -2,22 +2,20 @@
  * Controlador del modulo: auth (capa C de MVC).
  * Basado en los modelos: Usuario y Rol (dominio: seguridad).
  *
- * No usa services (capa aun no implementada por el equipo):
- * accede a los modelos Mongoose y responde con ApiResponse.
+ * Accede a los modelos Mongoose y responde con ApiResponse.
  * Los errores se delegan a error.middleware con next(err).
  */
-<<<<<<< HEAD
-const jwt = require('jsonwebtoken');
+import jwt from 'jsonwebtoken';
 
-const env = require('../config/env');
-const { ROLES, SEGURIDAD } = require('../config/constants');
-const { determinarTipoCliente } = require('../utils/dominios');
-const ApiError = require('../utils/ApiError');
-const ApiResponse = require('../utils/ApiResponse');
-const Rol = require('../models/seguridad/Rol');
-const Usuario = require('../models/seguridad/Usuario');
-const Cliente = require('../models/clientes/Cliente');
-const TipologiaPoblacional = require('../models/clientes/TipologiaPoblacional');
+import env from '../config/env.js';
+import { ROLES, SEGURIDAD } from '../config/constants.js';
+import { determinarTipoCliente } from '../utils/dominios.js';
+import ApiError from '../utils/ApiError.js';
+import ApiResponse from '../utils/ApiResponse.js';
+import Rol from '../models/seguridad/Rol.js';
+import Usuario from '../models/seguridad/Usuario.js';
+import Cliente from '../models/clientes/Cliente.js';
+import TipologiaPoblacional from '../models/clientes/TipologiaPoblacional.js';
 
 function firmarToken(usuario) {
   const rolNombre = usuario.rol && usuario.rol.nombre ? usuario.rol.nombre : usuario.rol;
@@ -214,7 +212,5 @@ async function cambiarContrasena(req, res, next) {
   }
 }
 
-module.exports = { registrar, login, obtenerPerfil, cambiarContrasena };
-=======
-export default {};
->>>>>>> ca5957decbb225619fdc681b279fd672eba8a7f5
+export { registrar, login, obtenerPerfil, cambiarContrasena };
+export default { registrar, login, obtenerPerfil, cambiarContrasena };
