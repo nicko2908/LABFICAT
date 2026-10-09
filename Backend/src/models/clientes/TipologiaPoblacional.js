@@ -10,7 +10,7 @@
  *  - Unicidad INSENSIBLE a mayusculas/minusculas (collation es, strength 2),
  *    para evitar "Indigena" y "indigena" como dos registros distintos.
  */
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 // Collation: ignora mayusculas/minusculas; respeta las tildes.
 const COLACION_ES = { locale: 'es', strength: 2 };
@@ -39,4 +39,4 @@ tipologiaSchema.statics.listarActivas = function () {
   return this.find({ activo: true }).sort({ nombre: 1 });
 };
 
-module.exports = mongoose.model('TipologiaPoblacional', tipologiaSchema);
+export default mongoose.model('TipologiaPoblacional', tipologiaSchema);

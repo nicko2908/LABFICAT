@@ -4,7 +4,7 @@
  * Catalogo de parametros que puede medir un analisis (pH, turbidez, etc.).
  * Referenciado por Analisis (que parametros mide) y por ResultadoParametro.
  */
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const parametroSchema = new mongoose.Schema(
   {
@@ -15,4 +15,4 @@ const parametroSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model('Parametro', parametroSchema);
+export default mongoose.model('Parametro', parametroSchema);

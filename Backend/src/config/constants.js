@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Constantes del sistema: enums y estados alineados al modelo de datos.
  * Se usan para no escribir "strings magicos" en el codigo.
  */
@@ -173,7 +173,7 @@ const LIMITES = {
   CUPON_VIGENCIA_DIAS: 5,       // vigencia fija del cupon, la establece Produccion de Centro
 };
 
-module.exports = {
+export {
   ROLES,
   ROLES_LISTA,
   TIPOS_DOCUMENTO,

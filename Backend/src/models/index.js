@@ -1,33 +1,37 @@
-/**
+﻿/**
  * Punto unico de acceso a los modelos.
  * Registrar aqui cada modelo a medida que se implementa,
  * para que populate() y el resto del codigo los encuentren.
  */
 // Seguridad
-const Rol = require('./seguridad/Rol');
-const Usuario = require('./seguridad/Usuario');
+import Rol from './seguridad/Rol.js';
+import Usuario from './seguridad/Usuario.js';
 
 // Clientes
-const TipologiaPoblacional = require('./clientes/TipologiaPoblacional');
-const Cliente = require('./clientes/Cliente');
+import TipologiaPoblacional from './clientes/TipologiaPoblacional.js';
+import Cliente from './clientes/Cliente.js';
 
-// Laboratorio (catalogos)
-const TipoMuestra = require('./laboratorio/TipoMuestra');
-const Parametro = require('./laboratorio/Parametro');
-const EtapaProceso = require('./laboratorio/EtapaProceso');
-const Analisis = require('./laboratorio/Analisis');
+// Laboratorio
+import TipoMuestra from './laboratorio/TipoMuestra.js';
+import Parametro from './laboratorio/Parametro.js';
+import EtapaProceso from './laboratorio/EtapaProceso.js';
+import Analisis from './laboratorio/Analisis.js';
+import Muestra from './laboratorio/Muestra.js';
+import Rotulo from './laboratorio/Rotulo.js';
+import SeguimientoMuestra from './laboratorio/SeguimientoMuestra.js';
+import HistorialPrioridad from './laboratorio/HistorialPrioridad.js';
 
 // Servicios
-const Solicitud = require('./servicios/Solicitud');
-const HistorialEstadoSolicitud = require('./servicios/HistorialEstadoSolicitud');
-const Cotizacion = require('./servicios/Cotizacion');
-const CuponPago = require('./servicios/CuponPago');
-const SoportePago = require('./servicios/SoportePago');
+import Solicitud from './servicios/Solicitud.js';
+import HistorialEstadoSolicitud from './servicios/HistorialEstadoSolicitud.js';
+import Cotizacion from './servicios/Cotizacion.js';
+import CuponPago from './servicios/CuponPago.js';
+import SoportePago from './servicios/SoportePago.js';
 
 // Sistema
-const ConfiguracionSistema = require('./sistema/ConfiguracionSistema');
+import ConfiguracionSistema from './sistema/ConfiguracionSistema.js';
 
-module.exports = {
+export {
   Rol,
   Usuario,
   TipologiaPoblacional,
@@ -36,6 +40,10 @@ module.exports = {
   Parametro,
   EtapaProceso,
   Analisis,
+  Muestra,
+  Rotulo,
+  SeguimientoMuestra,
+  HistorialPrioridad,
   Solicitud,
   HistorialEstadoSolicitud,
   Cotizacion,

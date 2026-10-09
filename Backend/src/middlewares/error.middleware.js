@@ -1,8 +1,8 @@
-/**
+﻿/**
  * Manejador central de errores.
  * Convierte cualquier error en una respuesta JSON uniforme.
  */
-const ApiError = require('../utils/ApiError');
+import ApiError from '../utils/ApiError.js';
 
 // eslint-disable-next-line no-unused-vars
 function errorHandler(err, req, res, next) {
@@ -21,4 +21,4 @@ function errorHandler(err, req, res, next) {
   });
 }
 
-module.exports = errorHandler;
+export default errorHandler;

@@ -13,12 +13,12 @@
  *  - recordatorios: subdocumentos (ex-tabla recordatorio_cupon), RF-24.
  *  - fecha_solicitud = timestamps.createdAt.
  */
-const mongoose = require('mongoose');
-const {
+import mongoose from 'mongoose';
+import {
   ESTADO_CUPON,
   ESTADO_CUPON_LISTA,
   LIMITES,
-} = require('../../config/constants');
+} from '../../config/constants.js';
 
 const recordatorioSchema = new mongoose.Schema(
   { fecha_envio: { type: Date, default: Date.now } },
@@ -74,4 +74,4 @@ cuponPagoSchema.pre('validate', function () {
   }
 });
 
-module.exports = mongoose.model('CuponPago', cuponPagoSchema);
+export default mongoose.model('CuponPago', cuponPagoSchema);

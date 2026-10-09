@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Error de aplicacion con codigo HTTP asociado.
  * Uso: throw new ApiError(404, 'Muestra no encontrada');
  */
@@ -30,4 +30,4 @@ class ApiError extends Error {
   }
 }
 
-module.exports = ApiError;
+export default ApiError;

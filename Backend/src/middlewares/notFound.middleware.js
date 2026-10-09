@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Responde 404 para rutas no registradas.
  */
 function notFound(req, res) {
@@ -8,4 +8,4 @@ function notFound(req, res) {
   });
 }
 
-module.exports = notFound;
+export default notFound;

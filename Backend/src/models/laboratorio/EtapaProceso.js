@@ -5,7 +5,7 @@
  * (seguimiento de la muestra). El campo "orden" define la secuencia oficial
  * (ver mapa de procesos LABFICAT).
  */
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const etapaProcesoSchema = new mongoose.Schema(
   {
@@ -23,4 +23,4 @@ etapaProcesoSchema.statics.listarOrdenadas = function () {
   return this.find({ activo: true }).sort({ orden: 1 });
 };
 
-module.exports = mongoose.model('EtapaProceso', etapaProcesoSchema);
+export default mongoose.model('EtapaProceso', etapaProcesoSchema);

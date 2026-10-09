@@ -11,12 +11,12 @@
  *  - validador: usuario coordinador que aprueba/rechaza; null mientras no se valide.
  *  - fecha_carga = timestamps.createdAt.
  */
-const mongoose = require('mongoose');
-const {
+import mongoose from 'mongoose';
+import {
   ESTADO_SOPORTE_PAGO,
   ESTADO_SOPORTE_PAGO_LISTA,
   FORMATOS_SOPORTE,
-} = require('../../config/constants');
+} from '../../config/constants.js';
 
 const soportePagoSchema = new mongoose.Schema(
   {
@@ -50,4 +50,4 @@ const soportePagoSchema = new mongoose.Schema(
   { timestamps: { createdAt: 'fecha_carga', updatedAt: true } }
 );
 
-module.exports = mongoose.model('SoportePago', soportePagoSchema);
+export default mongoose.model('SoportePago', soportePagoSchema);

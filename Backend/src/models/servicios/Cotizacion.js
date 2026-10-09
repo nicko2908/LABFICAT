@@ -11,8 +11,8 @@
  *  - firma digital (RF-05): se guarda el PNG (ruta), fecha/hora e IP.
  *  - fecha_emision = timestamps.createdAt.
  */
-const mongoose = require('mongoose');
-const { ESTADO_COTIZACION, ESTADO_COTIZACION_LISTA } = require('../../config/constants');
+import mongoose from 'mongoose';
+import { ESTADO_COTIZACION, ESTADO_COTIZACION_LISTA } from '../../config/constants.js';
 
 const detalleSchema = new mongoose.Schema(
   {
@@ -55,4 +55,4 @@ const cotizacionSchema = new mongoose.Schema(
   { timestamps: { createdAt: 'fecha_emision', updatedAt: true } }
 );
 
-module.exports = mongoose.model('Cotizacion', cotizacionSchema);
+export default mongoose.model('Cotizacion', cotizacionSchema);

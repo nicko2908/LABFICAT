@@ -11,8 +11,8 @@
  *    (jobs o procesos sin usuario humano).
  *  - createdAt renombrado a "fecha_hora"; sin updatedAt (log inmutable).
  */
-const mongoose = require('mongoose');
-const { ESTADO_SOLICITUD_LISTA } = require('../../config/constants');
+import mongoose from 'mongoose';
+import { ESTADO_SOLICITUD_LISTA } from '../../config/constants.js';
 
 const historialEstadoSolicitudSchema = new mongoose.Schema(
   {
@@ -40,4 +40,4 @@ const historialEstadoSolicitudSchema = new mongoose.Schema(
 // Indice para reconstruir la linea de tiempo de una solicitud.
 historialEstadoSolicitudSchema.index({ solicitud: 1, fecha_hora: 1 });
 
-module.exports = mongoose.model('HistorialEstadoSolicitud', historialEstadoSolicitudSchema);
+export default mongoose.model('HistorialEstadoSolicitud', historialEstadoSolicitudSchema);

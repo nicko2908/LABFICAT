@@ -13,8 +13,8 @@
  *    referencias (reemplazan las tablas analisis_parametro y analisis_tipo_muestra).
  *  - Nunca se elimina: se desactiva con "activo" (RF-25).
  */
-const mongoose = require('mongoose');
-const { LIMITES } = require('../../config/constants');
+import mongoose from 'mongoose';
+import { LIMITES } from '../../config/constants.js';
 
 const UNIDADES_CANTIDAD = ['ml', 'gr'];
 
@@ -36,4 +36,4 @@ const analisisSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model('Analisis', analisisSchema);
+export default mongoose.model('Analisis', analisisSchema);

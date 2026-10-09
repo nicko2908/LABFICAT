@@ -4,7 +4,7 @@
  * Catalogo de tipos de muestra que recibe el laboratorio.
  * Referenciado por Muestra y por Analisis (tipos de muestra que aplica).
  */
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const ESTADOS_FISICOS = ['SOLIDO', 'LIQUIDO'];
 
@@ -17,4 +17,4 @@ const tipoMuestraSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model('TipoMuestra', tipoMuestraSchema);
+export default mongoose.model('TipoMuestra', tipoMuestraSchema);

@@ -2,7 +2,7 @@
 
 API REST del sistema de gestion del laboratorio **LABFICAT** (Produccion de Centro - SENA).
 
-- **Stack:** Node.js + Express + Mongoose (MongoDB Atlas)
+- **Stack:** Node.js + Express + Mongoose (MongoDB Atlas), modulos **ESM** (`"type": "module"`)
 - **Arquitectura:** MVC + capa de servicios y validators
 - **Modulo:** Trabajo Final
 

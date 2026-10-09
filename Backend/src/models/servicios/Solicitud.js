@@ -12,8 +12,8 @@
  *    igual que el codigo de muestra del modelo original.
  *  - SIN campo "tipo_solicitud": RF-20 filtra por los analisis de la solicitud.
  */
-const mongoose = require('mongoose');
-const { ESTADO_SOLICITUD, ESTADO_SOLICITUD_LISTA } = require('../../config/constants');
+import mongoose from 'mongoose';
+import { ESTADO_SOLICITUD, ESTADO_SOLICITUD_LISTA } from '../../config/constants.js';
 
 const REGEX_CODIGO = /^SOL-\d{4}-\d{4}$/;
 
@@ -72,4 +72,4 @@ solicitudSchema.pre('validate', async function () {
   this.codigo_solicitud = `${prefijo}${String(consecutivo).padStart(4, '0')}`;
 });
 
-module.exports = mongoose.model('Solicitud', solicitudSchema);
+export default mongoose.model('Solicitud', solicitudSchema);

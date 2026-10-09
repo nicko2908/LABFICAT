@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Formato uniforme de respuestas exitosas.
  * Uso: res.json(new ApiResponse(datos, 'Muestra registrada'));
  */
@@ -10,4 +10,4 @@ class ApiResponse {
   }
 }
 
-module.exports = ApiResponse;
+export default ApiResponse;

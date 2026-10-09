@@ -1,15 +1,15 @@
-/**
+﻿/**
  * Configuracion de la aplicacion Express.
  * Separado de server.js para poder testear la app sin abrir puerto.
  */
-const express = require('express');
-const cors = require('cors');
-const morgan = require('morgan');
+import express from 'express';
+import cors from 'cors';
+import morgan from 'morgan';
 
-const env = require('./config/env');
-const routes = require('./routes');
-const notFound = require('./middlewares/notFound.middleware');
-const errorHandler = require('./middlewares/error.middleware');
+import env from './config/env.js';
+import routes from './routes/index.js';
+import notFound from './middlewares/notFound.middleware.js';
+import errorHandler from './middlewares/error.middleware.js';
 
 const app = express();
 
@@ -31,4 +31,4 @@ app.use(env.apiPrefix, routes);
 app.use(notFound);
 app.use(errorHandler);
 
-module.exports = app;
+export default app;

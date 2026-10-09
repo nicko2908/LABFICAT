@@ -1,8 +1,8 @@
-/**
+﻿/**
  * Carga y valida las variables de entorno del sistema.
  * Centraliza el acceso a process.env para no dispersarlo.
  */
-require('dotenv').config();
+import 'dotenv/config';
 
 const env = {
   nodeEnv: process.env.NODE_ENV || 'development',
@@ -31,4 +31,4 @@ const env = {
   },
 };
 
-module.exports = env;
+export default env;

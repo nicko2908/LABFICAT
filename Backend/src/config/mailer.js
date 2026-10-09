@@ -1,10 +1,10 @@
-/**
+﻿/**
  * Transporte SMTP (Nodemailer) para el envio de correos.
  * Expone enviarCorreo() reutilizable. Las reglas de "que se envia
  * y cuando" viven en services/notificacion/.
  */
-const nodemailer = require('nodemailer');
-const env = require('./env');
+import nodemailer from 'nodemailer';
+import env from './env.js';
 
 const transporter = nodemailer.createTransport({
   host: env.mail.host,
@@ -34,4 +34,4 @@ async function enviarCorreo({ para, asunto, html, texto, adjuntos = [] }) {
   });
 }
 
-module.exports = { transporter, enviarCorreo };
+export { transporter, enviarCorreo };
