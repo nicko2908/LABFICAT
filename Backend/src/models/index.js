@@ -1,10 +1,33 @@
 /**
  * Punto unico de acceso a los modelos.
- * A medida que se implementen los schemas, exportarlos aqui, por ejemplo:
- *
- *   const { Usuario, Rol } = require('./seguridad/Usuario');
- *   module.exports = { Usuario, Rol, ... };
- *
- * (Por ahora vacio: solo define la estructura del proyecto.)
+ * Registrar aqui cada modelo a medida que se implementa,
+ * para que populate() y el resto del codigo los encuentren.
  */
-module.exports = {};
+// Seguridad
+const Rol = require('./seguridad/Rol');
+const Usuario = require('./seguridad/Usuario');
+
+// Clientes
+const TipologiaPoblacional = require('./clientes/TipologiaPoblacional');
+const Cliente = require('./clientes/Cliente');
+
+// Laboratorio (catalogos)
+const TipoMuestra = require('./laboratorio/TipoMuestra');
+const Parametro = require('./laboratorio/Parametro');
+const EtapaProceso = require('./laboratorio/EtapaProceso');
+const Analisis = require('./laboratorio/Analisis');
+
+// Sistema
+const ConfiguracionSistema = require('./sistema/ConfiguracionSistema');
+
+module.exports = {
+  Rol,
+  Usuario,
+  TipologiaPoblacional,
+  Cliente,
+  TipoMuestra,
+  Parametro,
+  EtapaProceso,
+  Analisis,
+  ConfiguracionSistema,
+};

@@ -30,6 +30,13 @@ npm run dev
 npm start
 ```
 
+## Semilla de datos iniciales
+
+```bash
+# Crea los roles (cliente, analista, coordinador) y la configuracion del sistema
+npm run seed
+```
+
 ## Estructura
 
 ```
@@ -46,6 +53,7 @@ src/
 ├─ jobs/            Tareas programadas (node-cron)
 ├─ templates/       Plantillas de PDF, Excel y correo
 ├─ utils/           Helpers puros y generadores (PDF, Excel, QR, codigo)
+├─ seeds/           Datos iniciales (roles, configuracion) -> npm run seed
 └─ docs/            Documentacion de la API (Swagger/OpenAPI)
 storage/            Archivos subidos y generados (no versionado)
 tests/              Pruebas automatizadas
