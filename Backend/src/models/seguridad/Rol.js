@@ -10,8 +10,8 @@
  *  - permisos: array de subdocumentos sin _id propio.
  *  - activo: los roles nunca se eliminan, solo se desactivan.
  */
-const mongoose = require('mongoose');
-const { ROLES_LISTA, PERMISOS } = require('../../config/constants');
+import mongoose from 'mongoose';
+import { ROLES_LISTA, PERMISOS } from '../../config/constants.js';
 
 const permisoSchema = new mongoose.Schema(
   {
@@ -45,4 +45,4 @@ const rolSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model('Rol', rolSchema);
+export default mongoose.model('Rol', rolSchema);

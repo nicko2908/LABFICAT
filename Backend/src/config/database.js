@@ -1,9 +1,9 @@
-/**
+﻿/**
  * Conexion a MongoDB Atlas mediante Mongoose.
  * Expone connectDB() y los eventos basicos de la conexion.
  */
-const mongoose = require('mongoose');
-const env = require('./env');
+import mongoose from 'mongoose';
+import env from './env.js';
 
 async function connectDB() {
   if (!env.mongoUri) {
@@ -31,4 +31,4 @@ async function disconnectDB() {
   await mongoose.disconnect();
 }
 
-module.exports = { connectDB, disconnectDB };
+export { connectDB, disconnectDB };

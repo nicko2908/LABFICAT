@@ -3,8 +3,8 @@
  * TODO: implementar start() y registrar la expresion cron.
  */
 function start() {
-  // const cron = require('node-cron');
+  // import cron from 'node-cron';
   // cron.schedule('0 6 * * *', async () => { /* ... */ });
 }
 
-module.exports = { start };
+export { start };

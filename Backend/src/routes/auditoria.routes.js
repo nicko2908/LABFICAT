@@ -2,10 +2,10 @@
  * Rutas del modulo: auditoria
  * TODO: definir endpoints y encadenar middlewares + controlador.
  */
-const { Router } = require('express');
+import { Router } from 'express';
 const router = Router();
 
 // Ejemplo:
 // router.get('/', auth, permitir('coordinador'), ctrl.listar);
 
-module.exports = router;
+export default router;  

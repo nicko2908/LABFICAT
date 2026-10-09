@@ -6,6 +6,7 @@
  * accede a los modelos Mongoose y responde con ApiResponse.
  * Los errores se delegan a error.middleware con next(err).
  */
+<<<<<<< HEAD
 const jwt = require('jsonwebtoken');
 
 const env = require('../config/env');
@@ -214,3 +215,6 @@ async function cambiarContrasena(req, res, next) {
 }
 
 module.exports = { registrar, login, obtenerPerfil, cambiarContrasena };
+=======
+export default {};
+>>>>>>> ca5957decbb225619fdc681b279fd672eba8a7f5

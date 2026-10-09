@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Util: determinacion del tipo de cliente (INTERNO / EXTERNO).
  *
  * RF-02: el sistema asigna el tipo de usuario segun el dominio del correo.
@@ -19,4 +19,4 @@ function determinarTipoCliente(correo) {
   return DOMINIOS_INTERNOS.includes(dominio) ? 'INTERNO' : 'EXTERNO';
 }
 
-module.exports = { DOMINIOS_INTERNOS, determinarTipoCliente };
+export { DOMINIOS_INTERNOS, determinarTipoCliente };

@@ -8,6 +8,7 @@
  *  - nit unico parcial (solo colisiona cuando tiene valor string).
  *  - Sin borrado fisico: desactivar = Usuario.activo=false (RF-23).
  */
+<<<<<<< HEAD
 const { TIPO_CLIENTE } = require('../config/constants');
 const { determinarTipoCliente } = require('../utils/dominios');
 const ApiError = require('../utils/ApiError');
@@ -236,3 +237,6 @@ async function reactivar(req, res, next) {
 }
 
 module.exports = { listar, obtenerPorId, crear, actualizar, desactivar, reactivar };
+=======
+export default {};
+>>>>>>> ca5957decbb225619fdc681b279fd672eba8a7f5

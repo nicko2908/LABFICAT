@@ -9,6 +9,7 @@
  *  - Nunca se eliminan: se activan/desactivan con "activo".
  *  - "nombre" unico (tipologia: case-insensitive por collation es).
  */
+<<<<<<< HEAD
 const ApiError = require('../utils/ApiError');
 const ApiResponse = require('../utils/ApiResponse');
 const TipologiaPoblacional = require('../models/clientes/TipologiaPoblacional');
@@ -431,3 +432,6 @@ module.exports = {
   obtenerConfiguracionPorClave,
   actualizarConfiguracion,
 };
+=======
+export default {};
+>>>>>>> ca5957decbb225619fdc681b279fd672eba8a7f5
