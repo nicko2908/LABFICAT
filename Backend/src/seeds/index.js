@@ -101,14 +101,14 @@ const CONFIGURACION_SEMILLA = [
 
 // Las 12 tipologias poblacionales iniciales (RF-01).
 const TIPOLOGIAS_SEMILLA = [
-  'IndÃ­gena',
+  'Indígena',
   'Afrocolombiano, negro, raizal o palenquero',
   'Rrom o gitano',
   'Campesino',
-  'VÃ­ctima del conflicto armado',
+  'Víctima del conflicto armado',
   'Persona con discapacidad',
   'Mujer cabeza de hogar',
-  'PoblaciÃ³n LGBTIQ+',
+  'Población LGBTIQ+',
   'Persona reincorporada o reintegrada',
   'Empresario o emprendedor',
   'Aprendiz, estudiante o egresado',

@@ -1,5 +1,5 @@
 ﻿/**
- * Job programado (node-cron): RF-06: marca VENCIDO el cupon que supera la vigencia (15 dias).
+ * Job programado (node-cron): RF-06: marca VENCIDO el cupon que supera la vigencia (5 dias).
  * TODO: implementar start() y registrar la expresion cron.
  */
 function start() {

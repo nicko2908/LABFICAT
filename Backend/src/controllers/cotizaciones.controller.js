@@ -8,6 +8,7 @@ import { ESTADO_COTIZACION_LISTA } from '../config/constants.js';
 import Cotizacion from '../models/servicios/Cotizacion.js';
 import Solicitud from '../models/servicios/Solicitud.js';
 import Analisis from '../models/laboratorio/Analisis.js';
+import { subirFirma, descargarFirma as descargarFirmaService } from '../services/storage.service.js';
 
 const POPULATE_COTIZACION = [
   { path: 'solicitud', select: 'codigo_solicitud estado cliente' },
@@ -113,21 +114,26 @@ async function actualizar(req, res, next) {
 }
 
 /**
- * PATCH /cotizaciones/:id/decision — RF-05 aceptar/rechazar.
- * Aceptar exige firma digital: { decision: 'ACEPTADA', firma_ruta, firma_ip? }.
- * Rechazar exige motivo: { decision: 'RECHAZADA', motivo_rechazo }.
+ * PATCH /cotizaciones/:id/decision — RF-05 aceptar/rechazar (atomico).
+ * Aceptar sube la firma (PNG base64) a Supabase y guarda ruta + hash.
+ * Body: { decision: 'ACEPTADA', firma_base64, firma_ip? } o { decision: 'RECHAZADA', motivo_rechazo }.
  */
 async function decidir(req, res, next) {
   try {
-    const { decision, firma_ruta, firma_ip, motivo_rechazo } = req.body || {};
+    const { decision, firma_base64, firma_ip, motivo_rechazo } = req.body || {};
     if (!['ACEPTADA', 'RECHAZADA'].includes(decision)) throw ApiError.badRequest('decision debe ser ACEPTADA o RECHAZADA');
     const doc = await Cotizacion.findById(req.params.id);
     if (!doc) throw ApiError.notFound('Cotizacion no encontrada');
     if (doc.estado !== 'PENDIENTE') throw ApiError.badRequest('La cotizacion ya fue decidida');
     if (decision === 'ACEPTADA') {
-      if (!firma_ruta) throw ApiError.badRequest('firma_ruta es obligatoria para aceptar (firma digital RF-05)');
+      if (!firma_base64) throw ApiError.badRequest('firma_base64 es obligatoria para aceptar (firma digital RF-05)');
+      const { ruta, hash } = await subirFirma({
+        base64: firma_base64,
+        nombre: `firma_${doc._id}_${Date.now()}.png`,
+      });
       doc.estado = 'ACEPTADA';
-      doc.firma_ruta = firma_ruta;
+      doc.firma_ruta = ruta;
+      doc.firma_hash = hash;
       doc.firma_fecha = new Date();
       doc.firma_ip = firma_ip || req.ip || null;
       doc.motivo_rechazo = null;
@@ -145,5 +151,23 @@ async function decidir(req, res, next) {
   }
 }
 
-export { listar, obtenerPorId, crear, actualizar, decidir };
-export default { listar, obtenerPorId, crear, actualizar, decidir };
+/**
+ * GET /cotizaciones/:id/firma — respaldo legal: descarga el PNG de la firma.
+ * Solo coordinador; el cliente no tiene acceso a su propia firma.
+ */
+async function descargarFirma(req, res, next) {
+  try {
+    const doc = await Cotizacion.findById(req.params.id);
+    if (!doc) throw ApiError.notFound('Cotizacion no encontrada');
+    if (!doc.firma_ruta) throw ApiError.notFound('Esta cotizacion no tiene firma registrada');
+    const buffer = await descargarFirmaService(doc.firma_ruta);
+    res.set('Content-Type', 'image/png');
+    res.set('Content-Disposition', `inline; filename="firma_${doc._id}.png"`);
+    res.send(buffer);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export { listar, obtenerPorId, crear, actualizar, decidir, descargarFirma };
+export default { listar, obtenerPorId, crear, actualizar, decidir, descargarFirma };

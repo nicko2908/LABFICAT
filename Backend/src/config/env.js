@@ -25,6 +25,11 @@ const env = {
     toProduccion: process.env.MAIL_TO_PRODUCCION,
   },
 
+  supabase: {
+    url: process.env.SUPABASE_URL,
+    key: process.env.API_KEY_SUPABASE,
+  },
+
   negocio: {
     cuponUmbralRecordatorioDias: Number(process.env.CUPON_UMBRAL_RECORDATORIO_DIAS) || 5,
     tokenRecuperacionMinutos: Number(process.env.TOKEN_RECUPERACION_MINUTOS) || 30,
