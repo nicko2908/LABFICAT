@@ -12,7 +12,7 @@
  *  - CUPON_UMBRAL_RECORDATORIO_DIAS
  *  - TOKEN_RECUPERACION_MINUTOS
  */
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const configuracionSchema = new mongoose.Schema(
   {
@@ -29,4 +29,4 @@ const configuracionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model('ConfiguracionSistema', configuracionSchema);
+export default mongoose.model('ConfiguracionSistema', configuracionSchema);

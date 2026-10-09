@@ -13,9 +13,9 @@
  *  - contrasena_hash: CIFRADA y opcional (null). Nunca se devuelve (select:false).
  *  - seguridad: intentosFallidos, bloqueadoHasta, ultimoAcceso.
  */
-const mongoose = require('mongoose');
-const { TIPOS_DOCUMENTO_LISTA } = require('../../config/constants');
-const password = require('../../utils/password');
+import mongoose from 'mongoose';
+import { TIPOS_DOCUMENTO_LISTA } from '../../config/constants.js';
+import password from '../../utils/password.js';
 
 const REGEX_NOMBRES = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]+$/u;
 const REGEX_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -107,4 +107,4 @@ usuarioSchema.methods.toJSON = function () {
   return obj;
 };
 
-module.exports = mongoose.model('Usuario', usuarioSchema);
+export default mongoose.model('Usuario', usuarioSchema);

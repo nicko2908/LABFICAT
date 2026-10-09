@@ -8,15 +8,14 @@
  *  - nit unico parcial (solo colisiona cuando tiene valor string).
  *  - Sin borrado fisico: desactivar = Usuario.activo=false (RF-23).
  */
-const { TIPO_CLIENTE } = require('../config/constants');
-const { determinarTipoCliente } = require('../utils/dominios');
-const ApiError = require('../utils/ApiError');
-const ApiResponse = require('../utils/ApiResponse');
-const Cliente = require('../models/clientes/Cliente');
-const Usuario = require('../models/seguridad/Usuario');
-const Rol = require('../models/seguridad/Rol');
-const TipologiaPoblacional = require('../models/clientes/TipologiaPoblacional');
-const { ROLES } = require('../config/constants');
+import { TIPO_CLIENTE, ROLES } from '../config/constants.js';
+import { determinarTipoCliente } from '../utils/dominios.js';
+import ApiError from '../utils/ApiError.js';
+import ApiResponse from '../utils/ApiResponse.js';
+import Cliente from '../models/clientes/Cliente.js';
+import Usuario from '../models/seguridad/Usuario.js';
+import Rol from '../models/seguridad/Rol.js';
+import TipologiaPoblacional from '../models/clientes/TipologiaPoblacional.js';
 
 const POPULATE_CLIENTE = [
   { path: 'usuario', select: 'nombres apellidos tipo_documento numero_documento correo activo rol' },
@@ -235,4 +234,5 @@ async function reactivar(req, res, next) {
   }
 }
 
-module.exports = { listar, obtenerPorId, crear, actualizar, desactivar, reactivar };
+export { listar, obtenerPorId, crear, actualizar, desactivar, reactivar };
+export default { listar, obtenerPorId, crear, actualizar, desactivar, reactivar };

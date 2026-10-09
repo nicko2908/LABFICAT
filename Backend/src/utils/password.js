@@ -2,7 +2,7 @@
  * Util: hasheo y verificacion de contrasenas con bcryptjs.
  * Toda contrasena se guarda CIFRADA (RF-27); nunca en texto plano.
  */
-const bcrypt = require('bcryptjs');
+import bcrypt from 'bcryptjs';
 
 const SALT_ROUNDS = 10;
 
@@ -26,4 +26,5 @@ async function comparar(plano, hashGuardado) {
   return bcrypt.compare(plano, hashGuardado);
 }
 
-module.exports = { hash, comparar };
+export { hash, comparar };
+export default { hash, comparar };

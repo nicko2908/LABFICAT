@@ -1,19 +1,19 @@
-/**
+﻿/**
  * Punto de arranque del backend.
  * Conecta a MongoDB Atlas y levanta el servidor HTTP.
  */
-const app = require('./app');
-const env = require('./config/env');
-const { connectDB, disconnectDB } = require('./config/database');
+import app from './app.js';
+import env from './config/env.js';
+import { connectDB, disconnectDB } from './config/database.js';
 
 async function iniciar() {
   try {
     await connectDB();
 
     // Tareas programadas (node-cron). Se implementan en src/jobs.
-    // require('./jobs/recordatorioCupon.job').start();
-    // require('./jobs/vencimientoCupon.job').start();
-    // require('./jobs/limpiezaTokens.job').start();
+    // import { start as startRecordatorioCupon } from './jobs/recordatorioCupon.job.js';
+    // import { start as startVencimientoCupon } from './jobs/vencimientoCupon.job.js';
+    // import { start as startLimpiezaTokens } from './jobs/limpiezaTokens.job.js';
 
     const server = app.listen(env.port, () => {
       console.log(`[http] LABFICAT backend escuchando en http://localhost:${env.port}${env.apiPrefix}`);

@@ -9,14 +9,14 @@
  *  - Nunca se eliminan: se activan/desactivan con "activo".
  *  - "nombre" unico (tipologia: case-insensitive por collation es).
  */
-const ApiError = require('../utils/ApiError');
-const ApiResponse = require('../utils/ApiResponse');
-const TipologiaPoblacional = require('../models/clientes/TipologiaPoblacional');
-const TipoMuestra = require('../models/laboratorio/TipoMuestra');
-const Parametro = require('../models/laboratorio/Parametro');
-const EtapaProceso = require('../models/laboratorio/EtapaProceso');
-const Analisis = require('../models/laboratorio/Analisis');
-const ConfiguracionSistema = require('../models/sistema/ConfiguracionSistema');
+import ApiError from '../utils/ApiError.js';
+import ApiResponse from '../utils/ApiResponse.js';
+import TipologiaPoblacional from '../models/clientes/TipologiaPoblacional.js';
+import TipoMuestra from '../models/laboratorio/TipoMuestra.js';
+import Parametro from '../models/laboratorio/Parametro.js';
+import EtapaProceso from '../models/laboratorio/EtapaProceso.js';
+import Analisis from '../models/laboratorio/Analisis.js';
+import ConfiguracionSistema from '../models/sistema/ConfiguracionSistema.js';
 
 function traducirErrorMongoose(err) {
   if (err && err.code === 11000) {
@@ -399,34 +399,54 @@ async function actualizarConfiguracion(req, res, next) {
   }
 }
 
-module.exports = {
-  // Tipologias
+export {
   listarTipologias,
   crearTipologia,
   actualizarTipologia,
   cambiarEstadoTipologia,
-  // Tipos de muestra
   listarTiposMuestra,
   crearTipoMuestra,
   actualizarTipoMuestra,
   cambiarEstadoTipoMuestra,
-  // Parametros
   listarParametros,
   crearParametro,
   actualizarParametro,
   cambiarEstadoParametro,
-  // Etapas
   listarEtapas,
   crearEtapa,
   actualizarEtapa,
   cambiarEstadoEtapa,
-  // Analisis
   listarAnalisis,
   obtenerAnalisisPorId,
   crearAnalisis,
   actualizarAnalisis,
   cambiarEstadoAnalisis,
-  // Configuracion
+  listarConfiguracion,
+  obtenerConfiguracionPorClave,
+  actualizarConfiguracion,
+};
+export default {
+  listarTipologias,
+  crearTipologia,
+  actualizarTipologia,
+  cambiarEstadoTipologia,
+  listarTiposMuestra,
+  crearTipoMuestra,
+  actualizarTipoMuestra,
+  cambiarEstadoTipoMuestra,
+  listarParametros,
+  crearParametro,
+  actualizarParametro,
+  cambiarEstadoParametro,
+  listarEtapas,
+  crearEtapa,
+  actualizarEtapa,
+  cambiarEstadoEtapa,
+  listarAnalisis,
+  obtenerAnalisisPorId,
+  crearAnalisis,
+  actualizarAnalisis,
+  cambiarEstadoAnalisis,
   listarConfiguracion,
   obtenerConfiguracionPorClave,
   actualizarConfiguracion,

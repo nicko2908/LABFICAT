@@ -1,29 +1,29 @@
-/**
+﻿/**
  * Semilla de datos iniciales: roles, configuracion del sistema, catalogos
  * del laboratorio y usuario de prueba.
  *
  * Cada catalogo se siembra SOLO si su coleccion esta vacia (idempotente).
  * Ejecutar con:  npm run seed
  */
-require('dotenv').config();
+import 'dotenv/config';
 
-const { connectDB, disconnectDB } = require('../config/database');
-const Rol = require('../models/seguridad/Rol');
-const Usuario = require('../models/seguridad/Usuario');
-const TipologiaPoblacional = require('../models/clientes/TipologiaPoblacional');
-const TipoMuestra = require('../models/laboratorio/TipoMuestra');
-const Parametro = require('../models/laboratorio/Parametro');
-const EtapaProceso = require('../models/laboratorio/EtapaProceso');
-const Analisis = require('../models/laboratorio/Analisis');
-const ConfiguracionSistema = require('../models/sistema/ConfiguracionSistema');
-const password = require('../utils/password');
-const {
+import { connectDB, disconnectDB } from '../config/database.js';
+import Rol from '../models/seguridad/Rol.js';
+import Usuario from '../models/seguridad/Usuario.js';
+import TipologiaPoblacional from '../models/clientes/TipologiaPoblacional.js';
+import TipoMuestra from '../models/laboratorio/TipoMuestra.js';
+import Parametro from '../models/laboratorio/Parametro.js';
+import EtapaProceso from '../models/laboratorio/EtapaProceso.js';
+import Analisis from '../models/laboratorio/Analisis.js';
+import ConfiguracionSistema from '../models/sistema/ConfiguracionSistema.js';
+import password from '../utils/password.js';
+import {
   ROLES,
   PERMISOS,
   MODULOS,
   TIPOS_DOCUMENTO,
   CONFIGURACION_CLAVES,
-} = require('../config/constants');
+} from '../config/constants.js';
 
 // ---------------------------------------------------------------------------
 // Datos
@@ -88,11 +88,6 @@ const CONFIGURACION_SEMILLA = [
     descripcion: 'Nombre del area que provee los cupones de pago.',
   },
   {
-    clave: CONFIGURACION_CLAVES.CUPON_VIGENCIA_DIAS,
-    valor: String(process.env.CUPON_VIGENCIA_DIAS || 15),
-    descripcion: 'Dias de vigencia del cupon de pago (RF-06).',
-  },
-  {
     clave: CONFIGURACION_CLAVES.CUPON_UMBRAL_RECORDATORIO_DIAS,
     valor: String(process.env.CUPON_UMBRAL_RECORDATORIO_DIAS || 5),
     descripcion: 'Dias habiles sin generar cupon para disparar el recordatorio (RF-24).',
@@ -106,14 +101,14 @@ const CONFIGURACION_SEMILLA = [
 
 // Las 12 tipologias poblacionales iniciales (RF-01).
 const TIPOLOGIAS_SEMILLA = [
-  'Indígena',
+  'IndÃ­gena',
   'Afrocolombiano, negro, raizal o palenquero',
   'Rrom o gitano',
   'Campesino',
-  'Víctima del conflicto armado',
+  'VÃ­ctima del conflicto armado',
   'Persona con discapacidad',
   'Mujer cabeza de hogar',
-  'Población LGBTIQ+',
+  'PoblaciÃ³n LGBTIQ+',
   'Persona reincorporada o reintegrada',
   'Empresario o emprendedor',
   'Aprendiz, estudiante o egresado',
@@ -154,7 +149,7 @@ const ANALISIS_SEMILLA = [
     nombre: 'Analisis fisicoquimico de agua',
     descripcion: 'Determinacion de parametros fisicoquimicos en muestras de agua.',
     tarifa_externo: 120000,
-    cantidad_minima: 500,
+    cantidad_minima: 300,
     unidad_cantidad: 'ml',
     parametros: ['pH', 'Turbidez', 'Conductividad'],
     tipos_muestra: ['Agua'],
@@ -163,7 +158,7 @@ const ANALISIS_SEMILLA = [
     nombre: 'Analisis microbiologico de agua',
     descripcion: 'Recuento de microorganismos indicadores en muestras de agua.',
     tarifa_externo: 150000,
-    cantidad_minima: 500,
+    cantidad_minima: 300,
     unidad_cantidad: 'ml',
     parametros: ['Coliformes totales'],
     tipos_muestra: ['Agua'],

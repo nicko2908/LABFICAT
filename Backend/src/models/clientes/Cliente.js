@@ -13,8 +13,8 @@
  *  - SIN campo "activo": la desactivacion (RF-23) se maneja con Usuario.activo.
  *  - tipo_cliente: lo asigna el sistema a partir del correo (ver utils/dominios).
  */
-const mongoose = require('mongoose');
-const { TIPO_CLIENTE } = require('../../config/constants');
+import mongoose from 'mongoose';
+import { TIPO_CLIENTE } from '../../config/constants.js';
 
 const REGEX_TELEFONO = /^\d{10}$/;
 
@@ -64,4 +64,4 @@ clienteSchema.index(
   { unique: true, partialFilterExpression: { nit: { $type: 'string' } } }
 );
 
-module.exports = mongoose.model('Cliente', clienteSchema);
+export default mongoose.model('Cliente', clienteSchema);
