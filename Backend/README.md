@@ -30,6 +30,30 @@ npm run dev
 npm start
 ```
 
+## Variables de entorno
+
+- **Obligatorias:** `MONGO_URI` y `JWT_SECRET`. Si faltan, el backend no arranca.
+- **Supabase (opcional en local):** `SUPABASE_URL` y `API_KEY_SUPABASE`.
+  Si no estan configuradas, la API funciona igual y solo los endpoints de
+  firma digital responden `503 Storage no configurado`.
+- **Negocio:** `CUPON_VIGENCIA_DIAS` (por defecto 5), `CUPON_UMBRAL_RECORDATORIO_DIAS`
+  y `TOKEN_RECUPERACION_MINUTOS`.
+
+## Verificacion rapida
+
+```bash
+# 1. La app responde (no requiere Mongo)
+curl http://localhost:3000/health
+
+# 2. Login con el usuario sembrado (requiere npm run seed)
+curl -X POST http://localhost:3000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d "{\"correo\":\"coordinador@sena.edu.co\",\"contrasena\":\"Labficat123*\"}"
+
+# 3. Prueba de humo automatizada
+npm test
+```
+
 ## Semilla de datos iniciales
 
 ```bash

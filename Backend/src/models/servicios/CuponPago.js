@@ -6,8 +6,8 @@
  *
  * Decisiones:
  *  - Solo aplica a usuarios externos y es de UNICO USO (reglas del service).
- *  - Vigencia FIJA de 5 dias desde la generacion (la establece Produccion de Centro);
- *    la constante es LIMITES.CUPON_VIGENCIA_DIAS.
+ *  - Vigencia FIJA desde la generacion (la establece Produccion de Centro);
+ *    se configura con CUPON_VIGENCIA_DIAS (por defecto 5 dias).
  *  - codigo_cupon: referencia de Produccion de Centro/Bancolombia. Unico cuando
  *    tiene valor (varios null no colisionan). NO es la PK (la PK es _id).
  *  - recordatorios: subdocumentos (ex-tabla recordatorio_cupon), RF-24.
@@ -17,8 +17,8 @@ import mongoose from 'mongoose';
 import {
   ESTADO_CUPON,
   ESTADO_CUPON_LISTA,
-  LIMITES,
 } from '../../config/constants.js';
+import env from '../../config/env.js';
 
 const recordatorioSchema = new mongoose.Schema(
   { fecha_envio: { type: Date, default: Date.now } },
@@ -69,7 +69,7 @@ cuponPagoSchema.index(
 cuponPagoSchema.pre('validate', function () {
   if (this.fecha_generacion && !this.fecha_vencimiento) {
     const vencimiento = new Date(this.fecha_generacion);
-    vencimiento.setDate(vencimiento.getDate() + LIMITES.CUPON_VIGENCIA_DIAS);
+    vencimiento.setDate(vencimiento.getDate() + env.negocio.cuponVigenciaDias);
     this.fecha_vencimiento = vencimiento;
   }
 });

@@ -177,7 +177,7 @@ const LIMITES = {
   EVIDENCIA_MAX_ARCHIVOS: 5,
   RECLAMACION_DIAS_HABILES: 5,
   CANTIDAD_MINIMA_MUESTRA: 300, // gr o ml (RF-09)
-  CUPON_VIGENCIA_DIAS: 5,       // vigencia fija del cupon, la establece Produccion de Centro
+  // La vigencia del cupon se configura con CUPON_VIGENCIA_DIAS (config/env.js).
 };
 
 export {

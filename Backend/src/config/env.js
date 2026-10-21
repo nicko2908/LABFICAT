@@ -1,39 +1,83 @@
 ﻿/**
  * Carga y valida las variables de entorno del sistema.
  * Centraliza el acceso a process.env para no dispersarlo.
+ *
+ * Reglas:
+ *  - MONGO_URI y JWT_SECRET son obligatorias: sin ellas el backend no arranca.
+ *  - Supabase es opcional: si falta configuracion, el storage responde 503
+ *    solo cuando se usa (ver config/supabase.js), sin tumbar el resto de la API.
  */
 import 'dotenv/config';
 
+const PLACEHOLDER_JWT = 'cambiar_por_una_clave_larga_y_aleatoria';
+
+function texto(nombre) {
+  const valor = process.env[nombre];
+  return typeof valor === 'string' ? valor.trim() : '';
+}
+
+function obligatoria(nombre) {
+  const valor = texto(nombre);
+  if (!valor) {
+    throw new Error(`[env] Falta la variable obligatoria ${nombre} en el archivo .env`);
+  }
+  return valor;
+}
+
+function numero(nombre, porDefecto) {
+  const valor = Number(texto(nombre));
+  return Number.isFinite(valor) && valor > 0 ? valor : porDefecto;
+}
+
+const nodeEnv = texto('NODE_ENV') || 'development';
+const jwtSecret = obligatoria('JWT_SECRET');
+
+if (nodeEnv === 'production') {
+  if (jwtSecret === PLACEHOLDER_JWT || jwtSecret.length < 32) {
+    throw new Error(
+      '[env] JWT_SECRET insegura para produccion: use una clave aleatoria de al menos 32 caracteres'
+    );
+  }
+} else if (jwtSecret === PLACEHOLDER_JWT || jwtSecret.length < 32) {
+  console.warn(
+    '[env] Aviso: JWT_SECRET es un valor de plantilla o demasiado corta. Cambiela antes de desplegar.'
+  );
+}
+
 const env = {
-  nodeEnv: process.env.NODE_ENV || 'development',
-  port: Number(process.env.PORT) || 3000,
-  apiPrefix: process.env.API_PREFIX || '/api/v1',
-  corsOrigin: process.env.CORS_ORIGIN || '*',
+  nodeEnv,
+  port: numero('PORT', 3000),
+  apiPrefix: texto('API_PREFIX') || '/api/v1',
+  corsOrigin: texto('CORS_ORIGIN') || '*',
 
-  mongoUri: process.env.MONGO_URI,
+  mongoUri: obligatoria('MONGO_URI'),
 
-  jwtSecret: process.env.JWT_SECRET || 'labficat-dev-secret',
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '8h',
+  jwtSecret,
+  jwtExpiresIn: texto('JWT_EXPIRES_IN') || '8h',
 
   mail: {
-    host: process.env.MAIL_HOST,
-    port: Number(process.env.MAIL_PORT) || 587,
-    secure: process.env.MAIL_SECURE === 'true',
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASS,
-    from: process.env.MAIL_FROM || 'LABFICAT <no-reply@labficat.local>',
-    toProduccion: process.env.MAIL_TO_PRODUCCION,
+    host: texto('MAIL_HOST') || null,
+    port: numero('MAIL_PORT', 587),
+    secure: texto('MAIL_SECURE') === 'true',
+    user: texto('MAIL_USER') || null,
+    pass: texto('MAIL_PASS') || null,
+    from: texto('MAIL_FROM') || 'LABFICAT <no-reply@labficat.local>',
+    toProduccion: texto('MAIL_TO_PRODUCCION') || null,
   },
 
   supabase: {
-    url: process.env.SUPABASE_URL,
-    key: process.env.API_KEY_SUPABASE,
+    url: texto('SUPABASE_URL') || null,
+    key: texto('API_KEY_SUPABASE') || null,
   },
 
   negocio: {
-    cuponUmbralRecordatorioDias: Number(process.env.CUPON_UMBRAL_RECORDATORIO_DIAS) || 5,
-    tokenRecuperacionMinutos: Number(process.env.TOKEN_RECUPERACION_MINUTOS) || 30,
+    cuponVigenciaDias: numero('CUPON_VIGENCIA_DIAS', 5),
+    cuponUmbralRecordatorioDias: numero('CUPON_UMBRAL_RECORDATORIO_DIAS', 5),
+    tokenRecuperacionMinutos: numero('TOKEN_RECUPERACION_MINUTOS', 30),
   },
 };
+
+// Bandera util para health checks o diagnosticos, sin exponer las credenciales.
+env.supabase.configurado = Boolean(env.supabase.url && env.supabase.key);
 
 export default env;

@@ -7,6 +7,9 @@ import cors from 'cors';
 import morgan from 'morgan';
 
 import env from './config/env.js';
+// Registra todos los modelos antes de montar las rutas. Sin esto, populate()
+// depende de que otro modulo haya importado el modelo por casualidad.
+import './models/index.js';
 import routes from './routes/index.js';
 import notFound from './middlewares/notFound.middleware.js';
 import errorHandler from './middlewares/error.middleware.js';

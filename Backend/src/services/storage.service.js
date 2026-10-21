@@ -2,10 +2,13 @@
  * Service: Storage (Supabase). Almacena las firmas digitales de forma PRIVADA.
  * En BD solo se guarda la ruta del objeto y su hash SHA-256 (integridad legal);
  * el binario vive en el bucket privado y solo se recupera desde el backend.
+ *
+ * El cliente se obtiene dentro de cada funcion para mantener la inicializacion
+ * perezosa: importar este modulo no requiere que Supabase este configurado.
  */
 import crypto from 'node:crypto';
 import ApiError from '../utils/ApiError.js';
-import supabase from '../config/supabase.js';
+import { getSupabase } from '../config/supabase.js';
 
 const BUCKET = 'firmas';
 
@@ -17,7 +20,12 @@ const BUCKET = 'firmas';
 export async function subirFirma({ base64, nombre }) {
   const limpio = String(base64).replace(/^data:image\/png;base64,/, '');
   const buffer = Buffer.from(limpio, 'base64');
+  if (buffer.length === 0) {
+    throw ApiError.badRequest('La firma esta vacia o no es un PNG valido');
+  }
+
   const hash = crypto.createHash('sha256').update(buffer).digest('hex');
+  const supabase = getSupabase();
 
   const { data, error } = await supabase.storage.from(BUCKET).upload(nombre, buffer, {
     contentType: 'image/png',
@@ -37,6 +45,7 @@ export async function subirFirma({ base64, nombre }) {
  * @returns {Promise<Buffer>} Contenido binario del PNG.
  */
 export async function descargarFirma(ruta) {
+  const supabase = getSupabase();
   const { data, error } = await supabase.storage.from(BUCKET).download(ruta);
   if (error) {
     throw new ApiError(404, `Firma no encontrada: ${error.message}`);

@@ -6,8 +6,8 @@
  * lo especifico del cliente.
  *
  * Decisiones:
- *  - tipologia: nullable (prospectos registrados por el operador). Obligatoria
- *    en la validacion de RF-02.
+ *  - tipologia: OBLIGATORIA. Si el cliente no se identifica con ninguna,
+ *    se usa la opcion del catalogo "Ninguna de las anteriores" (nunca null).
  *  - nit: unico solo cuando tiene valor (indice parcial), para no chocar entre
  *    clientes persona natural sin NIT.
  *  - SIN campo "activo": la desactivacion (RF-23) se maneja con Usuario.activo.
@@ -30,7 +30,7 @@ const clienteSchema = new mongoose.Schema(
     tipologia: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'TipologiaPoblacional',
-      default: null,
+      required: true,
       index: true,
     },
     tipo_cliente: {

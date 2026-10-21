@@ -1,7 +1,7 @@
 ﻿/**
  * Controlador del modulo: cupones (capa C de MVC).
  * Basado en: CuponPago (-> Cotizacion, solicitado_por -> Usuario). RF-06 / RF-24.
- * Vigencia fija de 5 dias (LIMITES.CUPON_VIGENCIA_DIAS) calculada por el modelo.
+ * Vigencia configurable (CUPON_VIGENCIA_DIAS, por defecto 5 dias) calculada por el modelo.
  */
 import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
