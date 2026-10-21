@@ -5,6 +5,7 @@
 import crypto from 'node:crypto';
 import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
+import { crearRegexBusqueda } from '../utils/regex.js';
 import env from '../config/env.js';
 import Auditoria from '../models/seguridad/Auditoria.js';
 import TokenRecuperacion from '../models/seguridad/TokenRecuperacion.js';
@@ -30,7 +31,8 @@ async function listar(req, res, next) {
     const { page, limit, skip } = paginacion(req);
     const filtro = {};
     if (req.query.usuario) filtro.usuario = req.query.usuario;
-    if (req.query.accion) filtro.accion = new RegExp(String(req.query.accion).trim(), 'i');
+    const rx = req.query.accion !== undefined ? crearRegexBusqueda(req.query.accion) : null;
+    if (rx) filtro.accion = rx;
     if (req.query.desde || req.query.hasta) {
       filtro.fecha_hora = {};
       if (req.query.desde) filtro.fecha_hora.$gte = new Date(req.query.desde);

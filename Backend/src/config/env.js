@@ -77,7 +77,23 @@ const env = {
   },
 };
 
-// Bandera util para health checks o diagnosticos, sin exponer las credenciales.
+// Banderas utiles para health checks o diagnosticos, sin exponer credenciales.
 env.supabase.configurado = Boolean(env.supabase.url && env.supabase.key);
+
+const mailPassPlaceholder =
+  !env.mail.pass || env.mail.pass === '********' || env.mail.pass === 'cambiar';
+const mailHostPlaceholder =
+  !env.mail.host || env.mail.host === 'smtp.ejemplo.com';
+
+env.mail.configurado = Boolean(
+  env.mail.host && env.mail.user && env.mail.pass && !mailPassPlaceholder && !mailHostPlaceholder
+);
+
+if (!env.mail.configurado) {
+  console.warn(
+    '[env] Aviso: SMTP no configurado (MAIL_HOST/MAIL_USER/MAIL_PASS). ' +
+      'Las notificaciones por correo no se enviaran hasta completar esas variables.'
+  );
+}
 
 export default env;

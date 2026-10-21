@@ -43,3 +43,18 @@ test('una ruta inexistente responde 404 con el formato de error', async () => {
     assert.match(body.mensaje, /Ruta no encontrada/);
   });
 });
+
+test('un body JSON null responde 400 y no 500', async () => {
+  await conServidor(async (base) => {
+    const res = await fetch(`${base}/api/v1/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: 'null',
+    });
+    assert.equal(res.status, 400);
+
+    const body = await res.json();
+    assert.equal(body.ok, false);
+    assert.equal(typeof body.mensaje, 'string');
+  });
+});

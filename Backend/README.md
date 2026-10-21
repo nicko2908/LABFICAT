@@ -38,6 +38,19 @@ npm start
   firma digital responden `503 Storage no configurado`.
 - **Negocio:** `CUPON_VIGENCIA_DIAS` (por defecto 5), `CUPON_UMBRAL_RECORDATORIO_DIAS`
   y `TOKEN_RECUPERACION_MINUTOS`.
+  La vigencia del cupon se lee al arrancar: **un cambio requiere reiniciar el proceso**.
+- **Correo (opcional hasta Fase 3):** `MAIL_HOST`, `MAIL_USER`, `MAIL_PASS`, `MAIL_FROM`.
+  Si falta configuracion real, el backend arranca y solo advierte; las
+  notificaciones por correo no se envian.
+
+## Estado de implementacion
+
+- **Fase 0:** cerrada en codigo y verificada contra Atlas (seed, login, `/health`).
+- **Fase 1:** implementada (tipologia `NINGUNA`, booleanos estrictos, regex
+  escapadas, listas blancas, JWT unificado, migracion y pruebas de regresion).
+- La opcion **NINGUNA** es un valor real del catalogo y no se puede desactivar.
+- Los servicios, uploads, generadores, notificaciones, auditoria automatica y
+  jobs siguen pendientes (fases 2 y 3).
 
 ## Verificacion rapida
 
@@ -50,16 +63,27 @@ curl -X POST http://localhost:3000/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d "{\"correo\":\"coordinador@sena.edu.co\",\"contrasena\":\"Labficat123*\"}"
 
-# 3. Prueba de humo automatizada
+# 3. Pruebas automatizadas (no requieren MongoDB)
 npm test
 ```
 
-## Semilla de datos iniciales
+Las pruebas cargan `tests/setup.js`, que usa `.env` si existe y, si no,
+define valores de prueba. Por eso `npm test` funciona en CI sin `.env`.
+
+## Semilla y migraciones
 
 ```bash
-# Crea los roles (cliente, analista, coordinador) y la configuracion del sistema
+# Crea/actualiza roles, configuracion, catalogos y usuario de prueba
 npm run seed
+
+# Migra clientes con tipologia null a NINGUNA (idempotente)
+npm run migrar:tipologia
 ```
+
+`npm run seed` sincroniza las 12 tipologias por nombre y garantiza el codigo
+`NINGUNA` sin sobrescribir cambios hechos por el coordinador. La migracion es
+independiente del seed y debe ejecutarse sobre bases existentes antes de
+desplegar la Fase 1.
 
 ## Estructura
 
@@ -79,8 +103,9 @@ src/
 ├─ utils/           Helpers puros y generadores (PDF, Excel, QR, codigo)
 ├─ seeds/           Datos iniciales (roles, configuracion) -> npm run seed
 └─ docs/            Documentacion de la API (Swagger/OpenAPI)
+scripts/            Migraciones de datos (no se ejecutan al arrancar)
 storage/            Archivos subidos y generados (no versionado)
-tests/              Pruebas automatizadas
+tests/              Pruebas automatizadas + bootstrap de entorno
 logs/               Salida de auditoria/errores
 ```
 

@@ -5,23 +5,19 @@
  * Accede a los modelos Mongoose y responde con ApiResponse.
  * Los errores se delegan a error.middleware con next(err).
  */
-import jwt from 'jsonwebtoken';
-
-import env from '../config/env.js';
 import { ROLES, SEGURIDAD } from '../config/constants.js';
 import { determinarTipoCliente } from '../utils/dominios.js';
+import { firmar } from '../utils/jwt.js';
+import { resolverTipologia } from '../utils/tipologias.js';
 import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import Rol from '../models/seguridad/Rol.js';
 import Usuario from '../models/seguridad/Usuario.js';
 import Cliente from '../models/clientes/Cliente.js';
-import TipologiaPoblacional from '../models/clientes/TipologiaPoblacional.js';
 
 function firmarToken(usuario) {
   const rolNombre = usuario.rol && usuario.rol.nombre ? usuario.rol.nombre : usuario.rol;
-  return jwt.sign({ sub: String(usuario._id), rol: rolNombre }, env.jwtSecret, {
-    expiresIn: env.jwtExpiresIn,
-  });
+  return firmar({ sub: String(usuario._id), rol: rolNombre });
 }
 
 function traducirErrorMongoose(err) {
@@ -31,6 +27,9 @@ function traducirErrorMongoose(err) {
   }
   if (err && err.name === 'ValidationError') {
     return ApiError.badRequest('Datos invalidos', err.errors);
+  }
+  if (err && err.name === 'CastError') {
+    return ApiError.badRequest('Identificador invalido');
   }
   return err;
 }
@@ -58,6 +57,9 @@ async function registrar(req, res, next) {
     if (!nombres || !apellidos || !tipo_documento || !numero_documento || !correo || !contrasena) {
       throw ApiError.badRequest('nombres, apellidos, tipo_documento, numero_documento, correo y contrasena son obligatorios');
     }
+    if (String(contrasena).length < 8) {
+      throw ApiError.badRequest('La contrasena debe tener minimo 8 caracteres');
+    }
     if (acepta_tratamiento_datos !== true) {
       throw ApiError.badRequest('Debe aceptar el tratamiento de datos (Ley 1581)');
     }
@@ -75,11 +77,8 @@ async function registrar(req, res, next) {
       throw new ApiError(500, 'Rol cliente no sembrado. Ejecute npm run seed');
     }
 
-    let tipologiaDoc = null;
-    if (tipologia) {
-      tipologiaDoc = await TipologiaPoblacional.findById(tipologia);
-      if (!tipologiaDoc) throw ApiError.badRequest('La tipologia indicada no existe');
-    }
+    // Politica hibrida: el autorregistro exige tipologia (RF-01).
+    const tipologiaDoc = await resolverTipologia(tipologia);
 
     const usuario = new Usuario({
       rol: rolCliente._id,
@@ -92,10 +91,11 @@ async function registrar(req, res, next) {
     await usuario.establecerContrasena(String(contrasena));
     await usuario.save();
 
+    let clienteCreado = null;
     try {
-      const cliente = await Cliente.create({
+      clienteCreado = await Cliente.create({
         usuario: usuario._id,
-        tipologia: tipologiaDoc ? tipologiaDoc._id : null,
+        tipologia: tipologiaDoc._id,
         tipo_cliente: determinarTipoCliente(correoNorm),
         telefono: telefono || null,
         razon_social: razon_social || null,
@@ -107,10 +107,13 @@ async function registrar(req, res, next) {
       const token = firmarToken(usuario);
       res
         .status(201)
-        .json(new ApiResponse({ token, usuario, cliente }, 'Registro exitoso'));
+        .json(new ApiResponse({ token, usuario, cliente: clienteCreado }, 'Registro exitoso'));
     } catch (errCliente) {
-      // Rollback: si falla el perfil, no dejar el usuario huerfano.
-      await Usuario.deleteOne({ _id: usuario._id });
+      // Rollback completo: no dejar usuario ni perfil huerfano.
+      if (clienteCreado) {
+        await Cliente.deleteOne({ _id: clienteCreado._id }).catch(() => {});
+      }
+      await Usuario.deleteOne({ _id: usuario._id }).catch(() => {});
       throw traducirErrorMongoose(errCliente);
     }
   } catch (err) {

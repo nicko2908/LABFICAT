@@ -20,6 +20,12 @@ const app = express();
 app.use(cors({ origin: env.corsOrigin, credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+// Un body JSON "null" deja req.body en null; normalizarlo evita TypeError en
+// controladores que leen req.body.campo despues de las validaciones basicas.
+app.use((req, res, next) => {
+  if (req.body === null || req.body === undefined) req.body = {};
+  next();
+});
 app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
 
 // Health check

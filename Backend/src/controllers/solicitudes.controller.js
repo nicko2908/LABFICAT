@@ -5,6 +5,7 @@
  */
 import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
+import { crearRegexBusqueda } from '../utils/regex.js';
 import { ESTADO_SOLICITUD_LISTA } from '../config/constants.js';
 import Solicitud from '../models/servicios/Solicitud.js';
 import HistorialEstadoSolicitud from '../models/servicios/HistorialEstadoSolicitud.js';
@@ -67,7 +68,8 @@ async function listar(req, res, next) {
       filtro.estado = req.query.estado;
     }
     if (req.query.cliente) filtro.cliente = req.query.cliente;
-    if (req.query.search) filtro.codigo_solicitud = new RegExp(String(req.query.search).trim(), 'i');
+    const rx = req.query.search !== undefined ? crearRegexBusqueda(req.query.search) : null;
+    if (rx) filtro.codigo_solicitud = rx;
     const [items, total] = await Promise.all([
       Solicitud.find(filtro).populate(POPULATE_SOLICITUD).sort({ createdAt: -1 }).skip(skip).limit(limit),
       Solicitud.countDocuments(filtro),

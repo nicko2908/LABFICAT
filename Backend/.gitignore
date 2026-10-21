@@ -7,11 +7,12 @@ node_modules/
 .env.*.local
 
 # Archivos generados y subidos (datos, no codigo)
-storage/
-!storage/**/.gitkeep
+storage/*
+!storage/.gitkeep
 
 # Logs
-logs/
+logs/*
+!logs/.gitkeep
 *.log
 npm-debug.log*
 

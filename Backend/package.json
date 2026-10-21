@@ -8,7 +8,8 @@
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "seed": "node src/seeds/index.js",
-    "test": "node --test"
+    "migrar:tipologia": "node scripts/migraciones/001-tipologia-ninguna.js",
+    "test": "node --test --import ./tests/setup.js"
   },
   "keywords": [
     "labficat",

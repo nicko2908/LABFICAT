@@ -95,6 +95,9 @@ async function actualizar(req, res, next) {
     if (!actual) throw ApiError.notFound('Cotizacion no encontrada');
     if (actual.estado !== 'PENDIENTE') throw ApiError.badRequest('Solo se puede editar una cotizacion PENDIENTE');
     if (req.body.detalle !== undefined) {
+      if (!Array.isArray(req.body.detalle) || req.body.detalle.length === 0) {
+        throw ApiError.badRequest('detalle debe ser un arreglo no vacio');
+      }
       const ids = req.body.detalle.map((d) => d.analisis);
       const n = await Analisis.countDocuments({ _id: { $in: ids } });
       if (n !== ids.length) throw ApiError.badRequest('Uno o mas analisis del detalle no existen');

@@ -65,7 +65,23 @@ async function responder(req, res, next) {
     if (!sol) throw ApiError.badRequest('La solicitud indicada no existe');
     const previa = await Encuesta.exists({ solicitud });
     if (previa) throw ApiError.conflict('La solicitud ya tiene encuesta');
-    const doc = await Encuesta.create(req.body);
+
+    // Lista blanca: evita mass assignment de _id, timestamps y campos de control.
+    const campos = [
+      'solicitud',
+      'satisfaccion_general',
+      'tiempo_entrega',
+      'atencion_personal',
+      'claridad_informe',
+      'recomendaria_servicio',
+      'comentarios',
+    ];
+    const datos = {};
+    for (const campo of campos) {
+      if (req.body && req.body[campo] !== undefined) datos[campo] = req.body[campo];
+    }
+
+    const doc = await Encuesta.create(datos);
     await doc.populate(POPULATE_ENCUESTA);
     res.status(201).json(new ApiResponse(doc, 'Encuesta registrada'));
   } catch (err) {

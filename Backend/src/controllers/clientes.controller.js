@@ -10,16 +10,18 @@
  */
 import { TIPO_CLIENTE, ROLES } from '../config/constants.js';
 import { determinarTipoCliente } from '../utils/dominios.js';
+import { parseBoolean } from '../utils/booleanos.js';
+import { crearRegexBusqueda } from '../utils/regex.js';
+import { resolverTipologia } from '../utils/tipologias.js';
 import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import Cliente from '../models/clientes/Cliente.js';
 import Usuario from '../models/seguridad/Usuario.js';
 import Rol from '../models/seguridad/Rol.js';
-import TipologiaPoblacional from '../models/clientes/TipologiaPoblacional.js';
 
 const POPULATE_CLIENTE = [
   { path: 'usuario', select: 'nombres apellidos tipo_documento numero_documento correo activo rol' },
-  { path: 'tipologia', select: 'nombre descripcion activo' },
+  { path: 'tipologia', select: 'nombre codigo descripcion activo' },
 ];
 
 function traducirErrorMongoose(err) {
@@ -44,7 +46,7 @@ async function listar(req, res, next) {
   try {
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 10));
-    const { search, tipo_cliente } = req.query;
+    const { search, tipo_cliente, activo } = req.query;
 
     const filtro = {};
     if (tipo_cliente) {
@@ -53,8 +55,17 @@ async function listar(req, res, next) {
       }
       filtro.tipo_cliente = tipo_cliente;
     }
-    if (search) {
-      const rx = new RegExp(String(search).trim(), 'i');
+
+    let activoFiltro;
+    if (activo !== undefined) {
+      activoFiltro = parseBoolean(activo);
+      if (activoFiltro === null) {
+        throw ApiError.badRequest('activo debe ser true o false');
+      }
+    }
+
+    const rx = search !== undefined ? crearRegexBusqueda(search) : null;
+    if (rx) {
       const usuarios = await Usuario.find({
         $or: [{ nombres: rx }, { apellidos: rx }, { correo: rx }, { numero_documento: rx }],
       }).select('_id');
@@ -63,6 +74,11 @@ async function listar(req, res, next) {
         { razon_social: rx },
         { nit: rx },
       ];
+    }
+
+    if (activoFiltro !== undefined) {
+      const usuariosPorEstado = await Usuario.find({ activo: activoFiltro }).select('_id');
+      filtro.usuario = { $in: usuariosPorEstado.map((u) => u._id) };
     }
 
     const [items, total] = await Promise.all([
@@ -105,6 +121,7 @@ async function obtenerPorId(req, res, next) {
  */
 async function crear(req, res, next) {
   let usuarioCreado = null;
+  let clienteCreado = null;
   try {
     const {
       nombres,
@@ -133,11 +150,9 @@ async function crear(req, res, next) {
     const rolCliente = await Rol.findOne({ nombre: ROLES.CLIENTE });
     if (!rolCliente) throw new ApiError(500, 'Rol cliente no sembrado. Ejecute npm run seed');
 
-    let tipologiaDoc = null;
-    if (tipologia) {
-      tipologiaDoc = await TipologiaPoblacional.findById(tipologia);
-      if (!tipologiaDoc) throw ApiError.badRequest('La tipologia indicada no existe');
-    }
+    // Politica hibrida: el operador puede no conocer la tipologia.
+    // En ese caso se asigna "Ninguna de las anteriores" (codigo NINGUNA).
+    const tipologiaDoc = await resolverTipologia(tipologia, { obligatoria: false });
 
     usuarioCreado = await Usuario.create({
       rol: rolCliente._id,
@@ -149,9 +164,9 @@ async function crear(req, res, next) {
       contrasena_hash: null, // prospecto sin credenciales (las define en RF-02 / recuperacion)
     });
 
-    const cliente = await Cliente.create({
+    clienteCreado = await Cliente.create({
       usuario: usuarioCreado._id,
-      tipologia: tipologiaDoc ? tipologiaDoc._id : null,
+      tipologia: tipologiaDoc._id,
       tipo_cliente: determinarTipoCliente(correoNorm),
       telefono: telefono || null,
       razon_social: razon_social || null,
@@ -160,9 +175,12 @@ async function crear(req, res, next) {
       fecha_aceptacion_datos: null,
     });
 
-    await cliente.populate(POPULATE_CLIENTE);
-    res.status(201).json(new ApiResponse(cliente, 'Cliente creado'));
+    await clienteCreado.populate(POPULATE_CLIENTE);
+    res.status(201).json(new ApiResponse(clienteCreado, 'Cliente creado'));
   } catch (err) {
+    if (clienteCreado) {
+      await Cliente.deleteOne({ _id: clienteCreado._id }).catch(() => {});
+    }
     if (usuarioCreado) {
       // Rollback: no dejar usuario huerfano si falla el perfil.
       await Usuario.deleteOne({ _id: usuarioCreado._id }).catch(() => {});
@@ -186,9 +204,12 @@ async function actualizar(req, res, next) {
       throw ApiError.badRequest('No hay campos validos para actualizar');
     }
 
-    if (cambios.tipologia) {
-      const t = await TipologiaPoblacional.findById(cambios.tipologia);
-      if (!t) throw ApiError.badRequest('La tipologia indicada no existe');
+    if (cambios.tipologia !== undefined) {
+      if (cambios.tipologia === null || String(cambios.tipologia).trim() === '') {
+        throw ApiError.badRequest('tipologia no puede ser null ni vacia');
+      }
+      const t = await resolverTipologia(cambios.tipologia);
+      cambios.tipologia = t._id;
     }
 
     const cliente = await Cliente.findByIdAndUpdate(req.params.id, cambios, {

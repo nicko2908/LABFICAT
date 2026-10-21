@@ -96,6 +96,14 @@ const TIPO_CLIENTE = {
   EXTERNO: 'EXTERNO',
 };
 
+// Codigo estable de la tipologia "Ninguna de las anteriores" (RF-01).
+// No se identifica por el nombre visible: el nombre puede cambiar.
+const TIPOLOGIA_CODIGO = {
+  NINGUNA: 'NINGUNA',
+};
+
+const TIPOLOGIA_NINGUNA_NOMBRE = 'Ninguna de las anteriores';
+
 const ESTADO_SOLICITUD = {
   REGISTRADA: 'Registrada',
   COTIZADA: 'Cotizada',
@@ -190,6 +198,8 @@ export {
   CONFIGURACION_CLAVES,
   SEGURIDAD,
   TIPO_CLIENTE,
+  TIPOLOGIA_CODIGO,
+  TIPOLOGIA_NINGUNA_NOMBRE,
   ESTADO_SOLICITUD,
   ESTADO_SOLICITUD_LISTA,
   ESTADO_COTIZACION,

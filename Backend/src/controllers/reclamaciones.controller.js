@@ -5,6 +5,7 @@
  */
 import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
+import { crearRegexBusqueda } from '../utils/regex.js';
 import { ESTADO_RECLAMACION_LISTA } from '../config/constants.js';
 import Reclamacion from '../models/calidad/Reclamacion.js';
 import Solicitud from '../models/servicios/Solicitud.js';
@@ -37,7 +38,8 @@ async function listar(req, res, next) {
       filtro.estado = req.query.estado;
     }
     if (req.query.solicitud) filtro.solicitud = req.query.solicitud;
-    if (req.query.search) filtro.codigo_soporte = new RegExp(String(req.query.search).trim(), 'i');
+    const rx = req.query.search !== undefined ? crearRegexBusqueda(req.query.search) : null;
+    if (rx) filtro.codigo_soporte = rx;
     const [items, total] = await Promise.all([
       Reclamacion.find(filtro).populate(POPULATE_RECLAMACION).sort({ fecha_registro: -1 }).skip(skip).limit(limit),
       Reclamacion.countDocuments(filtro),
@@ -67,6 +69,9 @@ async function crear(req, res, next) {
   try {
     const { solicitud, motivo, evidencias } = req.body || {};
     if (!solicitud || !motivo) throw ApiError.badRequest('solicitud y motivo son obligatorios');
+    if (evidencias !== undefined && !Array.isArray(evidencias)) {
+      throw ApiError.badRequest('evidencias debe ser un arreglo');
+    }
     const sol = await Solicitud.exists({ _id: solicitud });
     if (!sol) throw ApiError.badRequest('La solicitud indicada no existe');
     const doc = await Reclamacion.create({ solicitud, motivo, evidencias: evidencias || [] });

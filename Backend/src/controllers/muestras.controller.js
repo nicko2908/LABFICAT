@@ -5,6 +5,7 @@
  */
 import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
+import { crearRegexBusqueda } from '../utils/regex.js';
 import Muestra from '../models/laboratorio/Muestra.js';
 import Rotulo from '../models/laboratorio/Rotulo.js';
 import HistorialPrioridad from '../models/laboratorio/HistorialPrioridad.js';
@@ -46,7 +47,8 @@ async function listar(req, res, next) {
     if (req.query.estado_recepcion) filtro.estado_recepcion = req.query.estado_recepcion;
     if (req.query.prioridad) filtro.prioridad = Number(req.query.prioridad);
     if (req.query.solicitud) filtro.solicitud = req.query.solicitud;
-    if (req.query.search) filtro.codigo_muestra = new RegExp(String(req.query.search).trim(), 'i');
+    const rx = req.query.search !== undefined ? crearRegexBusqueda(req.query.search) : null;
+    if (rx) filtro.codigo_muestra = rx;
     const [items, total] = await Promise.all([
       Muestra.find(filtro).populate(POPULATE_MUESTRA).sort({ prioridad: 1, fecha_recepcion: 1 }).skip(skip).limit(limit),
       Muestra.countDocuments(filtro),
@@ -90,7 +92,29 @@ async function crear(req, res, next) {
     if (!tm) throw ApiError.badRequest('El tipo de muestra indicado no existe');
     const usuario = actorId(req);
     if (!usuario) throw ApiError.unauthorized();
-    const doc = await Muestra.create({ ...req.body, usuario });
+
+    // Lista blanca: codigo, prioridad, usuario y fecha_asignacion_codigo
+    // se controlan por el sistema o por endpoints propios.
+    const campos = [
+      'solicitud',
+      'tipo_muestra',
+      'nombre',
+      'descripcion',
+      'cantidad_recibida',
+      'unidad_medida',
+      'numero_envases',
+      'condiciones_conservacion',
+      'estado_recepcion',
+      'motivo_rechazo',
+      'fecha_recepcion',
+      'observaciones',
+    ];
+    const datos = {};
+    for (const campo of campos) {
+      if (req.body[campo] !== undefined) datos[campo] = req.body[campo];
+    }
+
+    const doc = await Muestra.create({ ...datos, usuario });
     await HistorialPrioridad.create({ muestra: doc._id, usuario, nivel: doc.prioridad || 3, motivo: 'Prioridad inicial de recepcion' });
     await doc.populate(POPULATE_MUESTRA);
     res.status(201).json(new ApiResponse(doc, 'Muestra registrada'));
@@ -102,9 +126,25 @@ async function crear(req, res, next) {
 /** PUT /muestras/:id — actualiza datos de recepcion (no codigo ni prioridad; ver endpoints propios). */
 async function actualizar(req, res, next) {
   try {
-    const prohibidos = ['codigo_muestra', 'prioridad', 'solicitud'];
-    const cambios = { ...req.body };
-    for (const k of prohibidos) delete cambios[k];
+    // Lista blanca: no se permite cambiar codigo, prioridad, solicitud,
+    // usuario ni fecha_asignacion_codigo desde este endpoint.
+    const campos = [
+      'tipo_muestra',
+      'nombre',
+      'descripcion',
+      'cantidad_recibida',
+      'unidad_medida',
+      'numero_envases',
+      'condiciones_conservacion',
+      'estado_recepcion',
+      'motivo_rechazo',
+      'fecha_recepcion',
+      'observaciones',
+    ];
+    const cambios = {};
+    for (const campo of campos) {
+      if (req.body && req.body[campo] !== undefined) cambios[campo] = req.body[campo];
+    }
     if (Object.keys(cambios).length === 0) throw ApiError.badRequest('No hay campos validos para actualizar');
     const doc = await Muestra.findByIdAndUpdate(req.params.id, cambios, { new: true, runValidators: true }).populate(POPULATE_MUESTRA);
     if (!doc) throw ApiError.notFound('Muestra no encontrada');
@@ -145,7 +185,8 @@ async function generarRotulo(req, res, next) {
     const { analisis, ruta_pdf } = req.body || {};
     const muestra = await Muestra.findById(req.params.id);
     if (!muestra) throw ApiError.notFound('Muestra no encontrada');
-    if (analisis) {
+    if (analisis !== undefined) {
+      if (!Array.isArray(analisis)) throw ApiError.badRequest('analisis debe ser un arreglo');
       const n = await Analisis.countDocuments({ _id: { $in: analisis } });
       if (n !== analisis.length) throw ApiError.badRequest('Uno o mas analisis no existen');
     }

@@ -11,6 +11,11 @@
 - `[ ]` pendiente
 - `[~]` parcial o requiere decisión
 
+> **Estado de implementación (21/10/2026):** Fase 0 cerrada y Fase 1
+> implementada. Ver `INFORME_FASE0_FASE1.md` para el detalle de archivos,
+> pruebas y verificación contra Atlas. Los checkboxes de las secciones 3 a 7
+> conservan el inventario original del plan; el estado real está en el informe.
+
 ---
 
 ## 1. Resumen ejecutivo
@@ -29,8 +34,8 @@ Lo que queda es principalmente **lógica de negocio y consistencia entre módulo
 
 | Fase | Contenido | Estado | Prioridad |
 |---|---|---|---|
-| Fase 0 | Arranque, entorno, Supabase perezoso, modelos registrados, smoke test | `[x]` Completada | P0 |
-| Fase 1 | Compatibilidad modelo ↔ controlador ↔ rutas | `[ ]` Pendiente | P0/P1 |
+| Fase 0 | Arranque, entorno, Supabase perezoso, modelos registrados, smoke test | `[x]` Completada y verificada contra Atlas | P0 |
+| Fase 1 | Compatibilidad modelo ↔ controlador ↔ rutas | `[x]` Implementada y probada | P0/P1 |
 | Fase 2 | Flujo entre modelos y autorización por propietario | `[ ]` Pendiente | P1 |
 | Fase 3 | Archivos, notificaciones, auditoría, jobs y seguridad | `[ ]` Pendiente | P2 |
 | Fase 4 | Pruebas de integración, OpenAPI, seeds QA, CI y frontend | `[ ]` Pendiente | P2 |
@@ -99,13 +104,17 @@ contraseña: Labficat123*
 
 ### 2.8 Advertencias que quedan abiertas
 
-- `[ ]` `JWT_SECRET` sigue siendo el valor de plantilla. En desarrollo solo advierte; en producción el backend no arranca.
-- `[ ]` `MAIL_PASS` sigue como `********`. No afecta el arranque porque las notificaciones aún no están implementadas.
-- `[ ]` Cambiar ambos secretos antes de desplegar.
+- `[x]` `JWT_SECRET` rotado a una clave aleatoria de 64 caracteres. El aviso de plantilla desapareció.
+- `[ ]` `MAIL_PASS` sigue como `********`. No afecta el arranque; el entorno ahora advierte que el SMTP no está configurado.
+- `[~]` `JWT_SECRET` listo; `MAIL_PASS` requiere credenciales SMTP reales antes de implementar notificaciones (Fase 3).
 
 ---
 
-## 3. Fase 1 — Compatibilidad modelo ↔ controlador ↔ rutas `[ ]`
+## 3. Fase 1 — Compatibilidad modelo ↔ controlador ↔ rutas `[x]`
+
+> Implementada el 21/10/2026. El detalle de cambios y pruebas está en
+> `INFORME_FASE0_FASE1.md`. Los checkboxes siguientes son el inventario
+> original del plan.
 
 ### 3.1 Tipología del cliente (prioridad inmediata)
 

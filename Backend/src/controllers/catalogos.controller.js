@@ -9,6 +9,9 @@
  *  - Nunca se eliminan: se activan/desactivan con "activo".
  *  - "nombre" unico (tipologia: case-insensitive por collation es).
  */
+import { TIPOLOGIA_CODIGO, TIPOLOGIA_NINGUNA_NOMBRE } from '../config/constants.js';
+import { parseBoolean } from '../utils/booleanos.js';
+import { crearRegexBusqueda } from '../utils/regex.js';
 import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import TipologiaPoblacional from '../models/clientes/TipologiaPoblacional.js';
@@ -51,8 +54,13 @@ async function listarTipologias(req, res, next) {
     }
     const { page, limit, skip } = paginacion(req);
     const filtro = {};
-    if (req.query.activo !== undefined) filtro.activo = req.query.activo === 'true';
-    if (req.query.search) filtro.nombre = new RegExp(String(req.query.search).trim(), 'i');
+    if (req.query.activo !== undefined) {
+      const activo = parseBoolean(req.query.activo);
+      if (activo === null) throw ApiError.badRequest('activo debe ser true o false');
+      filtro.activo = activo;
+    }
+    const rx = req.query.search !== undefined ? crearRegexBusqueda(req.query.search) : null;
+    if (rx) filtro.nombre = rx;
     const [items, total] = await Promise.all([
       TipologiaPoblacional.find(filtro).sort({ nombre: 1 }).skip(skip).limit(limit),
       TipologiaPoblacional.countDocuments(filtro),
@@ -76,7 +84,20 @@ async function crearTipologia(req, res, next) {
 
 async function actualizarTipologia(req, res, next) {
   try {
-    const doc = await TipologiaPoblacional.findByIdAndUpdate(req.params.id, req.body, {
+    // El codigo es un identificador estable: no se edita por API.
+    if (req.body && req.body.codigo !== undefined) {
+      throw ApiError.badRequest('El codigo de la tipologia no se puede modificar');
+    }
+
+    const cambios = {};
+    for (const campo of ['nombre', 'descripcion']) {
+      if (req.body && req.body[campo] !== undefined) cambios[campo] = req.body[campo];
+    }
+    if (Object.keys(cambios).length === 0) {
+      throw ApiError.badRequest('No hay campos validos para actualizar');
+    }
+
+    const doc = await TipologiaPoblacional.findByIdAndUpdate(req.params.id, cambios, {
       new: true,
       runValidators: true,
     });
@@ -91,13 +112,29 @@ async function cambiarEstadoTipologia(req, res, next) {
   try {
     const { activo } = req.body || {};
     if (activo === undefined) throw ApiError.badRequest('activo es obligatorio (true/false)');
-    const doc = await TipologiaPoblacional.findByIdAndUpdate(
-      req.params.id,
-      { activo: Boolean(activo) },
-      { new: true }
-    );
+    const nuevoEstado = parseBoolean(activo);
+    if (nuevoEstado === null) throw ApiError.badRequest('activo debe ser true o false');
+
+    const doc = await TipologiaPoblacional.findById(req.params.id);
     if (!doc) throw ApiError.notFound('Tipologia no encontrada');
-    res.json(new ApiResponse(doc, activo ? 'Tipologia activada' : 'Tipologia desactivada'));
+
+    // NINGUNA es el valor de fallback del sistema: no puede desactivarse.
+    // Se compara por codigo y, como respaldo, por el nombre original.
+    const esNinguna =
+      doc.codigo === TIPOLOGIA_CODIGO.NINGUNA ||
+      doc.nombre === TIPOLOGIA_NINGUNA_NOMBRE;
+    if (esNinguna && nuevoEstado === false) {
+      throw ApiError.conflict('La tipologia NINGUNA no se puede desactivar');
+    }
+
+    doc.activo = nuevoEstado;
+    await doc.save();
+    res.json(
+      new ApiResponse(
+        doc,
+        nuevoEstado ? 'Tipologia activada' : 'Tipologia desactivada'
+      )
+    );
   } catch (err) {
     next(traducirErrorMongoose(err));
   }
@@ -110,7 +147,11 @@ async function cambiarEstadoTipologia(req, res, next) {
 async function listarTiposMuestra(req, res, next) {
   try {
     const filtro = {};
-    if (req.query.activo !== undefined) filtro.activo = req.query.activo === 'true';
+    if (req.query.activo !== undefined) {
+      const activo = parseBoolean(req.query.activo);
+      if (activo === null) throw ApiError.badRequest('activo debe ser true o false');
+      filtro.activo = activo;
+    }
     if (req.query.estado_fisico) filtro.estado_fisico = req.query.estado_fisico;
     const items = await TipoMuestra.find(filtro).sort({ nombre: 1 });
     res.json(new ApiResponse(items, 'Tipos de muestra listados'));
@@ -132,7 +173,15 @@ async function crearTipoMuestra(req, res, next) {
 
 async function actualizarTipoMuestra(req, res, next) {
   try {
-    const doc = await TipoMuestra.findByIdAndUpdate(req.params.id, req.body, {
+    const cambios = {};
+    for (const campo of ['nombre', 'estado_fisico']) {
+      if (req.body && req.body[campo] !== undefined) cambios[campo] = req.body[campo];
+    }
+    if (Object.keys(cambios).length === 0) {
+      throw ApiError.badRequest('No hay campos validos para actualizar');
+    }
+
+    const doc = await TipoMuestra.findByIdAndUpdate(req.params.id, cambios, {
       new: true,
       runValidators: true,
     });
@@ -147,13 +196,20 @@ async function cambiarEstadoTipoMuestra(req, res, next) {
   try {
     const { activo } = req.body || {};
     if (activo === undefined) throw ApiError.badRequest('activo es obligatorio (true/false)');
+    const nuevoEstado = parseBoolean(activo);
+    if (nuevoEstado === null) throw ApiError.badRequest('activo debe ser true o false');
     const doc = await TipoMuestra.findByIdAndUpdate(
       req.params.id,
-      { activo: Boolean(activo) },
+      { activo: nuevoEstado },
       { new: true }
     );
     if (!doc) throw ApiError.notFound('Tipo de muestra no encontrado');
-    res.json(new ApiResponse(doc, activo ? 'Tipo de muestra activado' : 'Tipo de muestra desactivado'));
+    res.json(
+      new ApiResponse(
+        doc,
+        nuevoEstado ? 'Tipo de muestra activado' : 'Tipo de muestra desactivado'
+      )
+    );
   } catch (err) {
     next(traducirErrorMongoose(err));
   }
@@ -166,8 +222,13 @@ async function cambiarEstadoTipoMuestra(req, res, next) {
 async function listarParametros(req, res, next) {
   try {
     const filtro = {};
-    if (req.query.activo !== undefined) filtro.activo = req.query.activo === 'true';
-    if (req.query.search) filtro.nombre = new RegExp(String(req.query.search).trim(), 'i');
+    if (req.query.activo !== undefined) {
+      const activo = parseBoolean(req.query.activo);
+      if (activo === null) throw ApiError.badRequest('activo debe ser true o false');
+      filtro.activo = activo;
+    }
+    const rx = req.query.search !== undefined ? crearRegexBusqueda(req.query.search) : null;
+    if (rx) filtro.nombre = rx;
     const items = await Parametro.find(filtro).sort({ nombre: 1 });
     res.json(new ApiResponse(items, 'Parametros listados'));
   } catch (err) {
@@ -188,7 +249,15 @@ async function crearParametro(req, res, next) {
 
 async function actualizarParametro(req, res, next) {
   try {
-    const doc = await Parametro.findByIdAndUpdate(req.params.id, req.body, {
+    const cambios = {};
+    for (const campo of ['nombre', 'unidad_medida']) {
+      if (req.body && req.body[campo] !== undefined) cambios[campo] = req.body[campo];
+    }
+    if (Object.keys(cambios).length === 0) {
+      throw ApiError.badRequest('No hay campos validos para actualizar');
+    }
+
+    const doc = await Parametro.findByIdAndUpdate(req.params.id, cambios, {
       new: true,
       runValidators: true,
     });
@@ -203,13 +272,15 @@ async function cambiarEstadoParametro(req, res, next) {
   try {
     const { activo } = req.body || {};
     if (activo === undefined) throw ApiError.badRequest('activo es obligatorio (true/false)');
+    const nuevoEstado = parseBoolean(activo);
+    if (nuevoEstado === null) throw ApiError.badRequest('activo debe ser true o false');
     const doc = await Parametro.findByIdAndUpdate(
       req.params.id,
-      { activo: Boolean(activo) },
+      { activo: nuevoEstado },
       { new: true }
     );
     if (!doc) throw ApiError.notFound('Parametro no encontrado');
-    res.json(new ApiResponse(doc, activo ? 'Parametro activado' : 'Parametro desactivado'));
+    res.json(new ApiResponse(doc, nuevoEstado ? 'Parametro activado' : 'Parametro desactivado'));
   } catch (err) {
     next(traducirErrorMongoose(err));
   }
@@ -246,7 +317,15 @@ async function crearEtapa(req, res, next) {
 
 async function actualizarEtapa(req, res, next) {
   try {
-    const doc = await EtapaProceso.findByIdAndUpdate(req.params.id, req.body, {
+    const cambios = {};
+    for (const campo of ['nombre', 'orden']) {
+      if (req.body && req.body[campo] !== undefined) cambios[campo] = req.body[campo];
+    }
+    if (Object.keys(cambios).length === 0) {
+      throw ApiError.badRequest('No hay campos validos para actualizar');
+    }
+
+    const doc = await EtapaProceso.findByIdAndUpdate(req.params.id, cambios, {
       new: true,
       runValidators: true,
     });
@@ -261,13 +340,15 @@ async function cambiarEstadoEtapa(req, res, next) {
   try {
     const { activo } = req.body || {};
     if (activo === undefined) throw ApiError.badRequest('activo es obligatorio (true/false)');
+    const nuevoEstado = parseBoolean(activo);
+    if (nuevoEstado === null) throw ApiError.badRequest('activo debe ser true o false');
     const doc = await EtapaProceso.findByIdAndUpdate(
       req.params.id,
-      { activo: Boolean(activo) },
+      { activo: nuevoEstado },
       { new: true }
     );
     if (!doc) throw ApiError.notFound('Etapa no encontrada');
-    res.json(new ApiResponse(doc, activo ? 'Etapa activada' : 'Etapa desactivada'));
+    res.json(new ApiResponse(doc, nuevoEstado ? 'Etapa activada' : 'Etapa desactivada'));
   } catch (err) {
     next(traducirErrorMongoose(err));
   }
@@ -283,11 +364,17 @@ const POPULATE_ANALISIS = [
 ];
 
 async function validarReferenciasAnalisis(parametros, tipos_muestra) {
-  if (parametros) {
+  if (parametros !== undefined) {
+    if (!Array.isArray(parametros)) {
+      throw ApiError.badRequest('parametros debe ser un arreglo');
+    }
     const n = await Parametro.countDocuments({ _id: { $in: parametros } });
     if (n !== parametros.length) throw ApiError.badRequest('Uno o mas parametros no existen');
   }
-  if (tipos_muestra) {
+  if (tipos_muestra !== undefined) {
+    if (!Array.isArray(tipos_muestra)) {
+      throw ApiError.badRequest('tipos_muestra debe ser un arreglo');
+    }
     const n = await TipoMuestra.countDocuments({ _id: { $in: tipos_muestra } });
     if (n !== tipos_muestra.length) throw ApiError.badRequest('Uno o mas tipos de muestra no existen');
   }
@@ -296,8 +383,13 @@ async function validarReferenciasAnalisis(parametros, tipos_muestra) {
 async function listarAnalisis(req, res, next) {
   try {
     const filtro = {};
-    if (req.query.activo !== undefined) filtro.activo = req.query.activo === 'true';
-    if (req.query.search) filtro.nombre = new RegExp(String(req.query.search).trim(), 'i');
+    if (req.query.activo !== undefined) {
+      const activo = parseBoolean(req.query.activo);
+      if (activo === null) throw ApiError.badRequest('activo debe ser true o false');
+      filtro.activo = activo;
+    }
+    const rx = req.query.search !== undefined ? crearRegexBusqueda(req.query.search) : null;
+    if (rx) filtro.nombre = rx;
     const items = await Analisis.find(filtro).populate(POPULATE_ANALISIS).sort({ nombre: 1 });
     res.json(new ApiResponse(items, 'Analisis listados'));
   } catch (err) {
@@ -315,14 +407,34 @@ async function obtenerAnalisisPorId(req, res, next) {
   }
 }
 
+const CAMPOS_ANALISIS = [
+  'nombre',
+  'descripcion',
+  'tarifa_externo',
+  'cantidad_minima',
+  'unidad_cantidad',
+  'parametros',
+  'tipos_muestra',
+];
+
+function tomarCamposAnalisis(body) {
+  const datos = {};
+  for (const campo of CAMPOS_ANALISIS) {
+    if (body && body[campo] !== undefined) datos[campo] = body[campo];
+  }
+  return datos;
+}
+
 async function crearAnalisis(req, res, next) {
   try {
     const { nombre, tarifa_externo } = req.body || {};
     if (!nombre || tarifa_externo === undefined) {
       throw ApiError.badRequest('nombre y tarifa_externo son obligatorios');
     }
-    await validarReferenciasAnalisis(req.body.parametros, req.body.tipos_muestra);
-    const doc = await Analisis.create(req.body);
+
+    const datos = tomarCamposAnalisis(req.body);
+    await validarReferenciasAnalisis(datos.parametros, datos.tipos_muestra);
+    const doc = await Analisis.create(datos);
     await doc.populate(POPULATE_ANALISIS);
     res.status(201).json(new ApiResponse(doc, 'Analisis creado'));
   } catch (err) {
@@ -332,8 +444,13 @@ async function crearAnalisis(req, res, next) {
 
 async function actualizarAnalisis(req, res, next) {
   try {
-    await validarReferenciasAnalisis(req.body.parametros, req.body.tipos_muestra);
-    const doc = await Analisis.findByIdAndUpdate(req.params.id, req.body, {
+    const datos = tomarCamposAnalisis(req.body);
+    if (Object.keys(datos).length === 0) {
+      throw ApiError.badRequest('No hay campos validos para actualizar');
+    }
+
+    await validarReferenciasAnalisis(datos.parametros, datos.tipos_muestra);
+    const doc = await Analisis.findByIdAndUpdate(req.params.id, datos, {
       new: true,
       runValidators: true,
     }).populate(POPULATE_ANALISIS);
@@ -348,14 +465,16 @@ async function cambiarEstadoAnalisis(req, res, next) {
   try {
     const { activo } = req.body || {};
     if (activo === undefined) throw ApiError.badRequest('activo es obligatorio (true/false)');
+    const nuevoEstado = parseBoolean(activo);
+    if (nuevoEstado === null) throw ApiError.badRequest('activo debe ser true o false');
     const doc = await Analisis.findByIdAndUpdate(
       req.params.id,
-      { activo: Boolean(activo) },
+      { activo: nuevoEstado },
       { new: true }
     ).populate(POPULATE_ANALISIS);
     if (!doc) throw ApiError.notFound('Analisis no encontrado');
     // RF-25: nunca se elimina, solo se desactiva.
-    res.json(new ApiResponse(doc, activo ? 'Analisis activado' : 'Analisis desactivado'));
+    res.json(new ApiResponse(doc, nuevoEstado ? 'Analisis activado' : 'Analisis desactivado'));
   } catch (err) {
     next(traducirErrorMongoose(err));
   }

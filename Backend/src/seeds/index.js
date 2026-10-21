@@ -2,7 +2,9 @@
  * Semilla de datos iniciales: roles, configuracion del sistema, catalogos
  * del laboratorio y usuario de prueba.
  *
- * Cada catalogo se siembra SOLO si su coleccion esta vacia (idempotente).
+ * Los catalogos se siembran de forma idempotente. Las tipologias se
+ * sincronizan por nombre para que la opcion NINGUNA exista tambien en bases
+ * que ya tenian las 12 tipologias originales.
  * Ejecutar con:  npm run seed
  */
 import 'dotenv/config';
@@ -23,6 +25,8 @@ import {
   MODULOS,
   TIPOS_DOCUMENTO,
   CONFIGURACION_CLAVES,
+  TIPOLOGIA_CODIGO,
+  TIPOLOGIA_NINGUNA_NOMBRE,
 } from '../config/constants.js';
 
 // ---------------------------------------------------------------------------
@@ -100,20 +104,21 @@ const CONFIGURACION_SEMILLA = [
 ];
 
 // Las 12 tipologias poblacionales iniciales (RF-01).
+// NINGUNA es un valor real del catalogo: se usa como fallback del sistema.
 const TIPOLOGIAS_SEMILLA = [
-  'Indígena',
-  'Afrocolombiano, negro, raizal o palenquero',
-  'Rrom o gitano',
-  'Campesino',
-  'Víctima del conflicto armado',
-  'Persona con discapacidad',
-  'Mujer cabeza de hogar',
-  'Población LGBTIQ+',
-  'Persona reincorporada o reintegrada',
-  'Empresario o emprendedor',
-  'Aprendiz, estudiante o egresado',
-  'Ninguna de las anteriores',
-].map((nombre) => ({ nombre, activo: true }));
+  { nombre: 'Indígena', activo: true },
+  { nombre: 'Afrocolombiano, negro, raizal o palenquero', activo: true },
+  { nombre: 'Rrom o gitano', activo: true },
+  { nombre: 'Campesino', activo: true },
+  { nombre: 'Víctima del conflicto armado', activo: true },
+  { nombre: 'Persona con discapacidad', activo: true },
+  { nombre: 'Mujer cabeza de hogar', activo: true },
+  { nombre: 'Población LGBTIQ+', activo: true },
+  { nombre: 'Persona reincorporada o reintegrada', activo: true },
+  { nombre: 'Empresario o emprendedor', activo: true },
+  { nombre: 'Aprendiz, estudiante o egresado', activo: true },
+  { nombre: TIPOLOGIA_NINGUNA_NOMBRE, activo: true, codigo: TIPOLOGIA_CODIGO.NINGUNA },
+];
 
 // Tipos de muestra (ejemplos de prueba).
 const TIPOS_MUESTRA_SEMILLA = [
@@ -198,6 +203,30 @@ async function sembrarSiVacio(Modelo, datos, etiqueta) {
   console.log(`[seed] ${etiqueta} sembrados: ${datos.length}`);
 }
 
+/**
+ * Sincroniza las tipologias por nombre. No sobrescribe cambios del coordinador
+ * y garantiza que NINGUNA tenga su codigo estable.
+ */
+async function sembrarTipologias() {
+  await TipologiaPoblacional.bulkWrite(
+    TIPOLOGIAS_SEMILLA.map((tipologia) => ({
+      updateOne: {
+        filter: { nombre: tipologia.nombre },
+        update: { $setOnInsert: tipologia },
+        upsert: true,
+      },
+    }))
+  );
+
+  await TipologiaPoblacional.updateOne(
+    { nombre: TIPOLOGIA_NINGUNA_NOMBRE },
+    { $set: { codigo: TIPOLOGIA_CODIGO.NINGUNA } }
+  );
+
+  const total = await TipologiaPoblacional.countDocuments();
+  console.log(`[seed] Tipologias disponibles: ${total}`);
+}
+
 async function sembrarAnalisis() {
   const total = await Analisis.estimatedDocumentCount();
   if (total > 0) {
@@ -242,15 +271,16 @@ async function seed() {
     console.log(`[seed] Roles sembrados: ${ROLES_SEMILLA.length}`);
 
     // 2. Configuracion del sistema
+    // $setOnInsert: no sobrescribe valores editados por el coordinador (RF-24).
     await ConfiguracionSistema.bulkWrite(
       CONFIGURACION_SEMILLA.map((cfg) => ({
-        updateOne: { filter: { clave: cfg.clave }, update: { $set: cfg }, upsert: true },
+        updateOne: { filter: { clave: cfg.clave }, update: { $setOnInsert: cfg }, upsert: true },
       }))
     );
-    console.log(`[seed] Configuracion sembrada: ${CONFIGURACION_SEMILLA.length}`);
+    console.log(`[seed] Configuracion sincronizada: ${CONFIGURACION_SEMILLA.length}`);
 
     // 3. Catalogos
-    await sembrarSiVacio(TipologiaPoblacional, TIPOLOGIAS_SEMILLA, 'Tipologias');
+    await sembrarTipologias();
     await sembrarSiVacio(TipoMuestra, TIPOS_MUESTRA_SEMILLA, 'Tipos de muestra');
     await sembrarSiVacio(Parametro, PARAMETROS_SEMILLA, 'Parametros');
     await sembrarSiVacio(EtapaProceso, ETAPAS_SEMILLA, 'Etapas de proceso');
@@ -260,21 +290,34 @@ async function seed() {
     const rolCoordinador = await Rol.findOne({ nombre: ROLES.COORDINADOR });
     if (rolCoordinador) {
       const hash = await password.hash(USUARIO_PRUEBA.contrasena);
-      await Usuario.updateOne(
-        { correo: USUARIO_PRUEBA.correo },
-        {
-          $set: {
-            rol: rolCoordinador._id,
-            nombres: USUARIO_PRUEBA.nombres,
-            apellidos: USUARIO_PRUEBA.apellidos,
-            tipo_documento: USUARIO_PRUEBA.tipo_documento,
-            numero_documento: USUARIO_PRUEBA.numero_documento,
-            activo: true,
-          },
-          $setOnInsert: { contrasena_hash: hash },
-        },
-        { upsert: true }
-      );
+      const existente = await Usuario.findOne({ correo: USUARIO_PRUEBA.correo })
+        .select('+contrasena_hash');
+
+      if (!existente) {
+        await Usuario.create({
+          rol: rolCoordinador._id,
+          nombres: USUARIO_PRUEBA.nombres,
+          apellidos: USUARIO_PRUEBA.apellidos,
+          tipo_documento: USUARIO_PRUEBA.tipo_documento,
+          numero_documento: USUARIO_PRUEBA.numero_documento,
+          correo: USUARIO_PRUEBA.correo,
+          contrasena_hash: hash,
+          activo: true,
+        });
+      } else {
+        existente.rol = rolCoordinador._id;
+        existente.nombres = USUARIO_PRUEBA.nombres;
+        existente.apellidos = USUARIO_PRUEBA.apellidos;
+        existente.tipo_documento = USUARIO_PRUEBA.tipo_documento;
+        existente.numero_documento = USUARIO_PRUEBA.numero_documento;
+        existente.activo = true;
+        // Si el usuario fue creado como prospecto (sin credenciales),
+        // el seed le asigna la contrasena de prueba. No la sobrescribe
+        // si el usuario ya tiene una.
+        if (!existente.contrasena_hash) existente.contrasena_hash = hash;
+        await existente.save();
+      }
+
       console.log(`[seed] Usuario de prueba: ${USUARIO_PRUEBA.correo} / ${USUARIO_PRUEBA.contrasena}`);
     }
 

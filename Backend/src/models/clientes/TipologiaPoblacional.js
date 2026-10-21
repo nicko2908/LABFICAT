@@ -9,6 +9,8 @@
  *  - Nunca se eliminan registros: se desactivan con "activo" (RF-21).
  *  - Unicidad INSENSIBLE a mayusculas/minusculas (collation es, strength 2),
  *    para evitar "Indigena" y "indigena" como dos registros distintos.
+ *  - codigo: identificador estable para reglas de negocio (por ejemplo,
+ *    NINGUNA). No se usa el nombre visible porque el coordinador puede editarlo.
  */
 import mongoose from 'mongoose';
 
@@ -22,6 +24,14 @@ const tipologiaSchema = new mongoose.Schema(
       required: true,
       trim: true,
       maxlength: 100,
+    },
+    codigo: {
+      type: String,
+      unique: true,
+      sparse: true,
+      uppercase: true,
+      trim: true,
+      maxlength: 30,
     },
     descripcion: { type: String, trim: true, maxlength: 200, default: null },
     activo: { type: Boolean, default: true },
