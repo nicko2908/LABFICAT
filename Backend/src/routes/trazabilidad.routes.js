@@ -3,8 +3,8 @@
  * RF-12 / RF-13 / RF-26.
  *
  * - El analista registra el avance por etapa.
- * - El coordinador valida resultados; coordinador y analista consultan la
- *   linea de tiempo y el historial de validaciones.
+ * - El coordinador valida resultados.
+ * - El cliente y el personal consultan la linea de tiempo.
  */
 import { Router } from 'express';
 import autenticar from '../middlewares/auth.middleware.js';
@@ -16,7 +16,7 @@ const router = Router();
 router.use(autenticar);
 
 router.post('/seguimiento', permitir('analista'), ctrl.registrarSeguimiento);
-router.get('/muestra/:muestraId', permitir('coordinador', 'analista'), ctrl.lineaTiempoMuestra);
+router.get('/muestra/:muestraId', permitir('cliente', 'coordinador', 'analista'), ctrl.lineaTiempoMuestra);
 router.post('/validaciones', permitir('coordinador'), ctrl.validarResultado);
 router.get('/validaciones/orden/:ordenId', permitir('coordinador', 'analista'), ctrl.historialValidaciones);
 

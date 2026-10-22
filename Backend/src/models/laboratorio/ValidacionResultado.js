@@ -16,7 +16,6 @@ const validacionResultadoSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'OrdenAnalisis',
       required: true,
-      index: true,
     },
     usuario: {
       type: mongoose.Schema.Types.ObjectId,
@@ -28,6 +27,13 @@ const validacionResultadoSchema = new mongoose.Schema(
     motivo: { type: String, trim: true, maxlength: 500, default: null },
   },
   { timestamps: { createdAt: 'fecha_hora', updatedAt: false } }
+);
+
+// Una sola validacion por orden. Nombre explicito para no chocar con el
+// indice no unico "orden_1" de bases creadas con el esquema anterior.
+validacionResultadoSchema.index(
+  { orden: 1 },
+  { unique: true, name: 'uq_validacion_orden' }
 );
 
 export default mongoose.model('ValidacionResultado', validacionResultadoSchema);

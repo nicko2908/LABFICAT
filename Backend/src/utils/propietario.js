@@ -12,9 +12,17 @@ import Cliente from '../models/clientes/Cliente.js';
 import Solicitud from '../models/servicios/Solicitud.js';
 import Cotizacion from '../models/servicios/Cotizacion.js';
 import CuponPago from '../models/servicios/CuponPago.js';
+import Muestra from '../models/laboratorio/Muestra.js';
 
 function esCoordinador(usuario) {
   return Boolean(usuario && usuario.rol === ROLES.COORDINADOR);
+}
+
+function esPersonalLaboratorio(usuario) {
+  return Boolean(
+    usuario &&
+      (usuario.rol === ROLES.COORDINADOR || usuario.rol === ROLES.ANALISTA)
+  );
 }
 
 function idDe(valor) {
@@ -107,6 +115,61 @@ async function verificarPropietarioCotizacion(cotizacion, usuario, { session } =
 }
 
 /**
+ * Verifica el acceso a una muestra a traves de su solicitud.
+ * El coordinador y el analista pueden acceder a cualquier muestra.
+ * @param {import('mongoose').Document|object} muestra
+ * @param {{ id?: string, sub?: string, rol?: string }} usuario
+ * @param {{ session?: import('mongoose').ClientSession }} [opciones]
+ * @returns {Promise<{ esPersonal: boolean, cliente: import('mongoose').Document|null }>}
+ */
+async function verificarPropietarioMuestra(muestra, usuario, { session } = {}) {
+  if (!usuario) throw ApiError.unauthorized();
+  if (esPersonalLaboratorio(usuario)) {
+    return { esPersonal: true, cliente: null };
+  }
+
+  if (usuario.rol !== ROLES.CLIENTE) {
+    throw ApiError.forbidden('No tiene permisos para esta accion');
+  }
+
+  const solicitudId = idDe(muestra.solicitud);
+  let query = Solicitud.findById(solicitudId);
+  if (session) query = query.session(session);
+  const solicitud = await query;
+
+  if (!solicitud) throw ApiError.notFound('Solicitud no encontrada');
+
+  const acceso = await verificarPropietarioSolicitud(solicitud, usuario, {
+    session,
+  });
+  return { esPersonal: false, cliente: acceso.cliente };
+}
+
+/**
+ * Verifica el acceso a una orden a traves de su muestra.
+ * El coordinador y el analista pueden acceder a cualquier orden.
+ * @param {import('mongoose').Document|object} orden
+ * @param {{ id?: string, sub?: string, rol?: string }} usuario
+ * @param {{ session?: import('mongoose').ClientSession }} [opciones]
+ * @returns {Promise<{ esPersonal: boolean, cliente: import('mongoose').Document|null }>}
+ */
+async function verificarPropietarioOrden(orden, usuario, { session } = {}) {
+  if (!usuario) throw ApiError.unauthorized();
+  if (esPersonalLaboratorio(usuario)) {
+    return { esPersonal: true, cliente: null };
+  }
+
+  const muestraId = idDe(orden.muestra);
+  let query = Muestra.findById(muestraId);
+  if (session) query = query.session(session);
+  const muestra = await query;
+
+  if (!muestra) throw ApiError.notFound('Muestra no encontrada');
+
+  return verificarPropietarioMuestra(muestra, usuario, { session });
+}
+
+/**
  * Verifica el acceso a un cupon a traves de su cotizacion.
  * @param {import('mongoose').Document|object} cupon
  * @param {{ id?: string, sub?: string, rol?: string }} usuario
@@ -154,20 +217,26 @@ async function verificarPropietarioSoportePago(soporte, usuario, { session } = {
 
 export {
   esCoordinador,
+  esPersonalLaboratorio,
   idDe,
   obtenerClienteDelUsuario,
   verificarPropietarioSolicitud,
   verificarPropietarioCotizacion,
   verificarPropietarioCupon,
   verificarPropietarioSoportePago,
+  verificarPropietarioMuestra,
+  verificarPropietarioOrden,
 };
 
 export default {
   esCoordinador,
+  esPersonalLaboratorio,
   idDe,
   obtenerClienteDelUsuario,
   verificarPropietarioSolicitud,
   verificarPropietarioCotizacion,
   verificarPropietarioCupon,
   verificarPropietarioSoportePago,
+  verificarPropietarioMuestra,
+  verificarPropietarioOrden,
 };

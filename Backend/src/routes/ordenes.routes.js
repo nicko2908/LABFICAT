@@ -4,6 +4,7 @@
  *
  * - El analista crea la orden, avanza el estado y registra resultados.
  * - El coordinador gestiona, valida y repite analisis.
+ * - El cliente consulta las ordenes de sus muestras.
  */
 import { Router } from 'express';
 import autenticar from '../middlewares/auth.middleware.js';
@@ -14,8 +15,9 @@ const router = Router();
 
 router.use(autenticar);
 
+router.get('/mias', permitir('cliente'), ctrl.listarMias);
 router.get('/', permitir('coordinador', 'analista'), ctrl.listar);
-router.get('/:id', permitir('coordinador', 'analista'), ctrl.obtenerPorId);
+router.get('/:id', permitir('cliente', 'coordinador', 'analista'), ctrl.obtenerPorId);
 router.post('/', permitir('analista', 'coordinador'), ctrl.crear);
 router.patch('/:id/estado', permitir('analista', 'coordinador'), ctrl.avanzarEstado);
 router.put('/:id/resultados', permitir('analista'), ctrl.registrarResultados);
