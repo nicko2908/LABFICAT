@@ -10,6 +10,8 @@ import ApiError from './ApiError.js';
 import { ROLES } from '../config/constants.js';
 import Cliente from '../models/clientes/Cliente.js';
 import Solicitud from '../models/servicios/Solicitud.js';
+import Cotizacion from '../models/servicios/Cotizacion.js';
+import CuponPago from '../models/servicios/CuponPago.js';
 
 function esCoordinador(usuario) {
   return Boolean(usuario && usuario.rol === ROLES.COORDINADOR);
@@ -104,12 +106,60 @@ async function verificarPropietarioCotizacion(cotizacion, usuario, { session } =
   return verificarPropietarioSolicitud(solicitud, usuario, { session });
 }
 
+/**
+ * Verifica el acceso a un cupon a traves de su cotizacion.
+ * @param {import('mongoose').Document|object} cupon
+ * @param {{ id?: string, sub?: string, rol?: string }} usuario
+ * @param {{ session?: import('mongoose').ClientSession }} [opciones]
+ * @returns {Promise<{ esCoordinador: boolean, cliente: import('mongoose').Document|null }>}
+ */
+async function verificarPropietarioCupon(cupon, usuario, { session } = {}) {
+  if (!usuario) throw ApiError.unauthorized();
+  if (esCoordinador(usuario)) {
+    return { esCoordinador: true, cliente: null };
+  }
+
+  const cotizacionId = idDe(cupon.cotizacion);
+  let query = Cotizacion.findById(cotizacionId);
+  if (session) query = query.session(session);
+  const cotizacion = await query;
+
+  if (!cotizacion) throw ApiError.notFound('Cotizacion no encontrada');
+
+  return verificarPropietarioCotizacion(cotizacion, usuario, { session });
+}
+
+/**
+ * Verifica el acceso a un soporte de pago a traves de su cupon.
+ * @param {import('mongoose').Document|object} soporte
+ * @param {{ id?: string, sub?: string, rol?: string }} usuario
+ * @param {{ session?: import('mongoose').ClientSession }} [opciones]
+ * @returns {Promise<{ esCoordinador: boolean, cliente: import('mongoose').Document|null }>}
+ */
+async function verificarPropietarioSoportePago(soporte, usuario, { session } = {}) {
+  if (!usuario) throw ApiError.unauthorized();
+  if (esCoordinador(usuario)) {
+    return { esCoordinador: true, cliente: null };
+  }
+
+  const cuponId = idDe(soporte.cupon);
+  let query = CuponPago.findById(cuponId);
+  if (session) query = query.session(session);
+  const cupon = await query;
+
+  if (!cupon) throw ApiError.notFound('Cupon no encontrado');
+
+  return verificarPropietarioCupon(cupon, usuario, { session });
+}
+
 export {
   esCoordinador,
   idDe,
   obtenerClienteDelUsuario,
   verificarPropietarioSolicitud,
   verificarPropietarioCotizacion,
+  verificarPropietarioCupon,
+  verificarPropietarioSoportePago,
 };
 
 export default {
@@ -118,4 +168,6 @@ export default {
   obtenerClienteDelUsuario,
   verificarPropietarioSolicitud,
   verificarPropietarioCotizacion,
+  verificarPropietarioCupon,
+  verificarPropietarioSoportePago,
 };

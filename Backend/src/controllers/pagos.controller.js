@@ -7,6 +7,19 @@ import ApiResponse from '../utils/ApiResponse.js';
 import { ESTADO_SOPORTE_PAGO_LISTA } from '../config/constants.js';
 import SoportePago from '../models/servicios/SoportePago.js';
 import CuponPago from '../models/servicios/CuponPago.js';
+import Cotizacion from '../models/servicios/Cotizacion.js';
+import Solicitud from '../models/servicios/Solicitud.js';
+import {
+  cargarSoportePago,
+  validarSoportePago,
+  reenviarSoportePago,
+} from '../services/pago.service.js';
+import {
+  esCoordinador,
+  obtenerClienteDelUsuario,
+  verificarPropietarioCupon,
+  verificarPropietarioSoportePago,
+} from '../utils/propietario.js';
 
 const POPULATE_SOPORTE = [
   { path: 'cupon', select: 'codigo_cupon valor estado cotizacion' },
@@ -33,7 +46,7 @@ function actorId(req) {
   return (req.usuario && (req.usuario.id || req.usuario.sub)) || req.usuarioId || null;
 }
 
-/** GET /pagos — lista paginada. Filtros: estado, cupon. */
+/** GET /pagos — lista paginada (coordinador). Filtros: estado, cupon. */
 async function listar(req, res, next) {
   try {
     const { page, limit, skip } = paginacion(req);
@@ -53,11 +66,67 @@ async function listar(req, res, next) {
   }
 }
 
-/** GET /pagos/:id — detalle. */
+/** GET /pagos/mios — soportes de pago del cliente autenticado. */
+async function listarMios(req, res, next) {
+  try {
+    const cliente = await obtenerClienteDelUsuario(req.usuarioId);
+    const { page, limit, skip } = paginacion(req);
+
+    const solicitudes = await Solicitud.find({ cliente: cliente._id })
+      .select('_id')
+      .lean();
+    const cotizaciones = await Cotizacion.find({
+      solicitud: { $in: solicitudes.map((solicitud) => solicitud._id) },
+    })
+      .select('_id')
+      .lean();
+    const cupones = await CuponPago.find({
+      cotizacion: { $in: cotizaciones.map((cotizacion) => cotizacion._id) },
+    })
+      .select('_id')
+      .lean();
+
+    const filtro = {
+      cupon: { $in: cupones.map((cupon) => cupon._id) },
+    };
+
+    if (req.query.estado) {
+      if (!ESTADO_SOPORTE_PAGO_LISTA.includes(req.query.estado)) {
+        throw ApiError.badRequest('estado invalido');
+      }
+      filtro.estado = req.query.estado;
+    }
+
+    const [items, total] = await Promise.all([
+      SoportePago.find(filtro)
+        .populate(POPULATE_SOPORTE)
+        .sort({ fecha_carga: -1 })
+        .skip(skip)
+        .limit(limit),
+      SoportePago.countDocuments(filtro),
+    ]);
+
+    res.json(
+      new ApiResponse(
+        { items, total, page, pages: Math.ceil(total / limit) || 1 },
+        'Mis pagos listados'
+      )
+    );
+  } catch (err) {
+    next(traducirErrorMongoose(err));
+  }
+}
+
+/** GET /pagos/:id — detalle (coordinador o cliente propietario). */
 async function obtenerPorId(req, res, next) {
   try {
     const doc = await SoportePago.findById(req.params.id).populate(POPULATE_SOPORTE);
     if (!doc) throw ApiError.notFound('Soporte no encontrado');
+
+    if (!esCoordinador(req.usuario)) {
+      await verificarPropietarioSoportePago(doc, req.usuario);
+    }
+
     res.json(new ApiResponse(doc, 'Soporte obtenido'));
   } catch (err) {
     next(traducirErrorMongoose(err));
@@ -71,13 +140,19 @@ async function obtenerPorId(req, res, next) {
 async function cargar(req, res, next) {
   try {
     const { cupon, ruta_archivo, formato } = req.body || {};
-    if (!cupon || !ruta_archivo || !formato) throw ApiError.badRequest('cupon, ruta_archivo y formato son obligatorios');
-    const cup = await CuponPago.findById(cupon);
-    if (!cup) throw ApiError.badRequest('El cupon indicado no existe');
-    if (cup.estado !== 'GENERADO') throw ApiError.badRequest('Solo se carga soporte de un cupon GENERADO');
-    const previo = await SoportePago.exists({ cupon });
-    if (previo) throw ApiError.conflict('El cupon ya tiene soporte. Use reenviar si fue rechazado');
-    const doc = await SoportePago.create({ cupon, ruta_archivo, formato });
+    if (!cupon) throw ApiError.badRequest('cupon es obligatorio');
+
+    const cuponDoc = await CuponPago.findById(cupon);
+    if (!cuponDoc) throw ApiError.badRequest('El cupon indicado no existe');
+    await verificarPropietarioCupon(cuponDoc, req.usuario);
+
+    const doc = await cargarSoportePago({
+      cuponId: cupon,
+      rutaArchivo: ruta_archivo,
+      formato,
+      usuarioId: actorId(req),
+    });
+
     await doc.populate(POPULATE_SOPORTE);
     res.status(201).json(new ApiResponse(doc, 'Soporte cargado'));
   } catch (err) {
@@ -92,16 +167,18 @@ async function cargar(req, res, next) {
 async function reenviar(req, res, next) {
   try {
     const { ruta_archivo, formato } = req.body || {};
-    if (!ruta_archivo || !formato) throw ApiError.badRequest('ruta_archivo y formato son obligatorios');
-    const doc = await SoportePago.findById(req.params.id);
-    if (!doc) throw ApiError.notFound('Soporte no encontrado');
-    if (doc.estado !== 'RECHAZADO') throw ApiError.badRequest('Solo se reenvia un soporte RECHAZADO');
-    doc.ruta_archivo = ruta_archivo;
-    doc.formato = formato;
-    doc.estado = 'PENDIENTE_VERIFICACION';
-    doc.validador = null;
-    doc.fecha_validacion = null;
-    await doc.save();
+
+    const soporte = await SoportePago.findById(req.params.id);
+    if (!soporte) throw ApiError.notFound('Soporte no encontrado');
+    await verificarPropietarioSoportePago(soporte, req.usuario);
+
+    const doc = await reenviarSoportePago({
+      soporteId: req.params.id,
+      rutaArchivo: ruta_archivo,
+      formato,
+      usuarioId: actorId(req),
+    });
+
     await doc.populate(POPULATE_SOPORTE);
     res.json(new ApiResponse(doc, 'Soporte reenviado'));
   } catch (err) {
@@ -116,23 +193,20 @@ async function reenviar(req, res, next) {
 async function validar(req, res, next) {
   try {
     const { decision, observaciones } = req.body || {};
-    if (!['APROBADO', 'RECHAZADO'].includes(decision)) throw ApiError.badRequest('decision debe ser APROBADO o RECHAZADO');
-    const validador = actorId(req);
-    if (!validador) throw ApiError.unauthorized();
-    const doc = await SoportePago.findById(req.params.id);
-    if (!doc) throw ApiError.notFound('Soporte no encontrado');
-    if (doc.estado !== 'PENDIENTE_VERIFICACION') throw ApiError.badRequest('El soporte ya fue validado');
-    doc.estado = decision;
-    doc.validador = validador;
-    doc.fecha_validacion = new Date();
-    if (observaciones !== undefined) doc.observaciones = observaciones;
-    await doc.save();
+
+    const doc = await validarSoportePago({
+      soporteId: req.params.id,
+      decision,
+      observaciones,
+      usuarioId: actorId(req),
+    });
+
     await doc.populate(POPULATE_SOPORTE);
-    res.json(new ApiResponse(doc, `Soporte ${decision.toLowerCase()}`));
+    res.json(new ApiResponse(doc, `Soporte ${String(decision).toLowerCase()}`));
   } catch (err) {
     next(traducirErrorMongoose(err));
   }
 }
 
-export { listar, obtenerPorId, cargar, reenviar, validar };
-export default { listar, obtenerPorId, cargar, reenviar, validar };
+export { listar, listarMios, obtenerPorId, cargar, reenviar, validar };
+export default { listar, listarMios, obtenerPorId, cargar, reenviar, validar };

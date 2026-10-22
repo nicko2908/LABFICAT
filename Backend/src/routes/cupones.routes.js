@@ -2,8 +2,9 @@
  * Rutas del modulo: cupones (capa de enrutado).
  * RF-06 / RF-24.
  *
- * Gestion interna del cupon de pago: solo coordinador.
- * (La generacion/vencimiento automaticos los ejecutan los jobs, no HTTP.)
+ * - El coordinador gestiona el cupon.
+ * - El cliente consulta los suyos.
+ * - La generacion/vencimiento automaticos los ejecutan los jobs, no HTTP.
  */
 import { Router } from 'express';
 import autenticar from '../middlewares/auth.middleware.js';
@@ -14,8 +15,9 @@ const router = Router();
 
 router.use(autenticar);
 
+router.get('/mios', permitir('cliente'), ctrl.listarMios);
 router.get('/', permitir('coordinador'), ctrl.listar);
-router.get('/:id', permitir('coordinador'), ctrl.obtenerPorId);
+router.get('/:id', permitir('cliente', 'coordinador'), ctrl.obtenerPorId);
 router.post('/', permitir('coordinador'), ctrl.crear);
 router.patch('/:id/generar', permitir('coordinador'), ctrl.generar);
 router.post('/:id/recordatorios', permitir('coordinador'), ctrl.registrarRecordatorio);

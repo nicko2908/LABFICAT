@@ -31,7 +31,6 @@ const cuponPagoSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Cotizacion',
       required: true,
-      index: true,
     },
     solicitado_por: {
       type: mongoose.Schema.Types.ObjectId,
@@ -57,6 +56,14 @@ const cuponPagoSchema = new mongoose.Schema(
     recordatorios: { type: [recordatorioSchema], default: [] },
   },
   { timestamps: { createdAt: 'fecha_solicitud', updatedAt: true } }
+);
+
+// Un solo cupon por cotizacion.
+// Se usa un nombre explicito para no chocar con el indice no unico
+// "cotizacion_1" que pudiera existir en bases creadas con el esquema anterior.
+cuponPagoSchema.index(
+  { cotizacion: 1 },
+  { unique: true, name: 'uq_cupon_cotizacion' }
 );
 
 // Codigo unico solo cuando tiene valor real (string).
