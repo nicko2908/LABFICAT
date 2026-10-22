@@ -6,11 +6,22 @@
 import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import { crearRegexBusqueda } from '../utils/regex.js';
-import { ESTADO_SOLICITUD_LISTA } from '../config/constants.js';
+import {
+  ROLES,
+  ESTADO_SOLICITUD,
+  ESTADO_SOLICITUD_LISTA,
+} from '../config/constants.js';
 import Solicitud from '../models/servicios/Solicitud.js';
 import HistorialEstadoSolicitud from '../models/servicios/HistorialEstadoSolicitud.js';
 import Cliente from '../models/clientes/Cliente.js';
 import Analisis from '../models/laboratorio/Analisis.js';
+import { crearSolicitud } from '../services/solicitud.service.js';
+import { transicionarSolicitud } from '../services/flujo.service.js';
+import {
+  esCoordinador,
+  obtenerClienteDelUsuario,
+  verificarPropietarioSolicitud,
+} from '../utils/propietario.js';
 
 const POPULATE_SOLICITUD = [
   { path: 'cliente', select: 'tipo_cliente telefono razon_social nit usuario' },
@@ -49,27 +60,36 @@ async function validarReferencias(cliente, analisis) {
   }
 }
 
-async function registrarHistorial(solicitudId, estado, req, observacion = null) {
-  await HistorialEstadoSolicitud.create({
-    solicitud: solicitudId,
-    estado,
-    usuario: actorId(req),
-    observacion,
-  });
+function filtroSolicitudes(req, clienteId = null) {
+  const filtro = {};
+
+  if (req.query.estado) {
+    if (!ESTADO_SOLICITUD_LISTA.includes(req.query.estado)) {
+      throw ApiError.badRequest('estado invalido');
+    }
+    filtro.estado = req.query.estado;
+  }
+
+  if (clienteId) {
+    filtro.cliente = clienteId;
+  } else if (req.query.cliente) {
+    filtro.cliente = req.query.cliente;
+  }
+
+  const rx =
+    req.query.search !== undefined
+      ? crearRegexBusqueda(req.query.search)
+      : null;
+  if (rx) filtro.codigo_solicitud = rx;
+
+  return filtro;
 }
 
 /** GET /solicitudes — lista paginada. Filtros: estado, cliente, search (codigo). */
 async function listar(req, res, next) {
   try {
     const { page, limit, skip } = paginacion(req);
-    const filtro = {};
-    if (req.query.estado) {
-      if (!ESTADO_SOLICITUD_LISTA.includes(req.query.estado)) throw ApiError.badRequest('estado invalido');
-      filtro.estado = req.query.estado;
-    }
-    if (req.query.cliente) filtro.cliente = req.query.cliente;
-    const rx = req.query.search !== undefined ? crearRegexBusqueda(req.query.search) : null;
-    if (rx) filtro.codigo_solicitud = rx;
+    const filtro = filtroSolicitudes(req);
     const [items, total] = await Promise.all([
       Solicitud.find(filtro).populate(POPULATE_SOLICITUD).sort({ createdAt: -1 }).skip(skip).limit(limit),
       Solicitud.countDocuments(filtro),
@@ -80,25 +100,69 @@ async function listar(req, res, next) {
   }
 }
 
+/** GET /solicitudes/mias — solicitudes del cliente autenticado. */
+async function listarMias(req, res, next) {
+  try {
+    const cliente = await obtenerClienteDelUsuario(req.usuarioId);
+    const { page, limit, skip } = paginacion(req);
+    const filtro = filtroSolicitudes(req, cliente._id);
+
+    const [items, total] = await Promise.all([
+      Solicitud.find(filtro).populate(POPULATE_SOLICITUD).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      Solicitud.countDocuments(filtro),
+    ]);
+
+    res.json(
+      new ApiResponse(
+        { items, total, page, pages: Math.ceil(total / limit) || 1 },
+        'Mis solicitudes listadas'
+      )
+    );
+  } catch (err) {
+    next(traducirErrorMongoose(err));
+  }
+}
+
 /** GET /solicitudes/:id — detalle con cliente y analisis. */
 async function obtenerPorId(req, res, next) {
   try {
     const doc = await Solicitud.findById(req.params.id).populate(POPULATE_SOLICITUD);
     if (!doc) throw ApiError.notFound('Solicitud no encontrada');
+
+    if (!esCoordinador(req.usuario)) {
+      await verificarPropietarioSolicitud(doc, req.usuario);
+    }
+
     res.json(new ApiResponse(doc, 'Solicitud obtenida'));
   } catch (err) {
     next(traducirErrorMongoose(err));
   }
 }
 
-/** POST /solicitudes — crea solicitud en estado REGISTRADA (el codigo se autogenera). */
+/**
+ * POST /solicitudes — crea solicitud en estado Registrada.
+ * El cliente autenticado no puede elegir el cliente: se deriva de su perfil.
+ */
 async function crear(req, res, next) {
   try {
-    const { cliente, descripcion_inicial, analisis } = req.body || {};
-    if (!cliente || !analisis) throw ApiError.badRequest('cliente y analisis son obligatorios');
-    await validarReferencias(cliente, analisis);
-    const doc = await Solicitud.create({ cliente, descripcion_inicial: descripcion_inicial || null, analisis });
-    await registrarHistorial(doc._id, doc.estado, req, 'Solicitud registrada');
+    const { cliente: clienteBody, descripcion_inicial, analisis } = req.body || {};
+
+    let clienteId;
+    if (req.usuario && req.usuario.rol === ROLES.CLIENTE) {
+      const cliente = await obtenerClienteDelUsuario(req.usuarioId);
+      clienteId = cliente._id;
+    } else {
+      if (!clienteBody) throw ApiError.badRequest('cliente es obligatorio');
+      clienteId = clienteBody;
+    }
+
+    const doc = await crearSolicitud({
+      clienteId,
+      descripcionInicial: descripcion_inicial,
+      analisis,
+      usuarioId: actorId(req),
+    });
+
     await doc.populate(POPULATE_SOLICITUD);
     res.status(201).json(new ApiResponse(doc, 'Solicitud creada'));
   } catch (err) {
@@ -109,6 +173,12 @@ async function crear(req, res, next) {
 /** PUT /solicitudes/:id — solo descripcion y analisis (no estado; usar PATCH estado). */
 async function actualizar(req, res, next) {
   try {
+    const actual = await Solicitud.findById(req.params.id);
+    if (!actual) throw ApiError.notFound('Solicitud no encontrada');
+    if (actual.estado !== ESTADO_SOLICITUD.REGISTRADA) {
+      throw ApiError.conflict('Solo se puede editar una solicitud en estado Registrada');
+    }
+
     const cambios = {};
     if (req.body.descripcion_inicial !== undefined) cambios.descripcion_inicial = req.body.descripcion_inicial;
     if (req.body.analisis !== undefined) {
@@ -135,17 +205,14 @@ async function actualizar(req, res, next) {
 async function cambiarEstado(req, res, next) {
   try {
     const { estado, observacion, motivo_desistimiento } = req.body || {};
-    if (!estado || !ESTADO_SOLICITUD_LISTA.includes(estado)) throw ApiError.badRequest('estado invalido');
-    const doc = await Solicitud.findById(req.params.id);
-    if (!doc) throw ApiError.notFound('Solicitud no encontrada');
-    doc.estado = estado;
-    if (estado === 'Desistida') {
-      doc.motivo_desistimiento = motivo_desistimiento || null;
-      doc.fecha_cierre = new Date();
-    }
-    if (estado === 'Cerrada' || estado === 'Finalizada') doc.fecha_cierre = doc.fecha_cierre || new Date();
-    await doc.save();
-    await registrarHistorial(doc._id, estado, req, observacion || null);
+    if (!estado) throw ApiError.badRequest('estado es obligatorio');
+
+    const doc = await transicionarSolicitud(req.params.id, estado, {
+      usuario: actorId(req),
+      observacion: observacion || null,
+      motivoDesistimiento: motivo_desistimiento || null,
+    });
+
     await doc.populate(POPULATE_SOLICITUD);
     res.json(new ApiResponse(doc, `Solicitud en estado ${estado}`));
   } catch (err) {
@@ -156,16 +223,38 @@ async function cambiarEstado(req, res, next) {
 /** GET /solicitudes/:id/historial — linea de tiempo (RF-26). */
 async function obtenerHistorial(req, res, next) {
   try {
-    const solicitud = await Solicitud.exists({ _id: req.params.id });
+    const solicitud = await Solicitud.findById(req.params.id).select('cliente').lean();
     if (!solicitud) throw ApiError.notFound('Solicitud no encontrada');
+
+    if (!esCoordinador(req.usuario)) {
+      await verificarPropietarioSolicitud(solicitud, req.usuario);
+    }
+
     const items = await HistorialEstadoSolicitud.find({ solicitud: req.params.id })
       .populate('usuario', 'nombres apellidos correo')
       .sort({ fecha_hora: 1 });
+
     res.json(new ApiResponse(items, 'Historial obtenido'));
   } catch (err) {
     next(traducirErrorMongoose(err));
   }
 }
 
-export { listar, obtenerPorId, crear, actualizar, cambiarEstado, obtenerHistorial };
-export default { listar, obtenerPorId, crear, actualizar, cambiarEstado, obtenerHistorial };
+export {
+  listar,
+  listarMias,
+  obtenerPorId,
+  crear,
+  actualizar,
+  cambiarEstado,
+  obtenerHistorial,
+};
+export default {
+  listar,
+  listarMias,
+  obtenerPorId,
+  crear,
+  actualizar,
+  cambiarEstado,
+  obtenerHistorial,
+};
