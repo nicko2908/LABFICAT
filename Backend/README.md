@@ -63,12 +63,32 @@ curl -X POST http://localhost:3000/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d "{\"correo\":\"coordinador@sena.edu.co\",\"contrasena\":\"Labficat123*\"}"
 
-# 3. Pruebas automatizadas (no requieren MongoDB)
+# 3. Pruebas automatizadas
 npm test
 ```
 
 Las pruebas cargan `tests/setup.js`, que usa `.env` si existe y, si no,
 define valores de prueba. Por eso `npm test` funciona en CI sin `.env`.
+
+Las pruebas de integracion usan `mongodb-memory-server`. Si ya tienes un
+`mongod` local, evita la descarga del binario (aproximadamente 780 MB)
+indicando su ruta:
+
+```powershell
+# Windows / PowerShell
+$env:MONGOMS_SYSTEM_BINARY="C:\Program Files\MongoDB\Server\8.2\bin\mongod.exe"
+npm test
+```
+
+```bash
+# Linux / macOS
+export MONGOMS_SYSTEM_BINARY=/usr/bin/mongod
+npm test
+```
+
+Sin esa variable, la primera ejecucion descarga el binario automaticamente.
+Las pruebas de integracion necesitan un replica set porque MongoDB solo
+permite transacciones sobre replica sets.
 
 ## Semilla y migraciones
 
