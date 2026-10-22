@@ -30,13 +30,17 @@ La Fase 0 (arranque reproducible) quedó completada y verificada. El backend ya:
 - funciona sin Supabase configurado (el storage responde `503` solo cuando se usa),
 - tiene una prueba de humo automatizada.
 
-Lo que queda es principalmente **lógica de negocio y consistencia entre módulos**: tipologías, validaciones, transiciones de estado, permisos por propietario, endpoints para el cliente, archivos reales, notificaciones, auditoría, jobs y pruebas de integración.
+> **Actualización 22/10/2026:** la Fase 2A quedó cerrada con 95 pruebas
+> automatizadas y una prueba E2E del flujo completo. Ver `INFORME_FASE2A.md`.
+> La Fase 2B (refactor opcional de servicios) sigue pendiente.
+
+Lo que queda es principalmente **capa de producción**: archivos reales, notificaciones, auditoría automática, jobs, seguridad, documentación, CI y frontend.
 
 | Fase | Contenido | Estado | Prioridad |
 |---|---|---|---|
 | Fase 0 | Arranque, entorno, Supabase perezoso, modelos registrados, smoke test | `[x]` Completada y verificada contra Atlas | P0 |
 | Fase 1 | Compatibilidad modelo ↔ controlador ↔ rutas | `[x]` Implementada y probada | P0/P1 |
-| Fase 2 | Flujo entre modelos y autorización por propietario | `[ ]` Pendiente | P1 |
+| Fase 2 | Flujo entre modelos y autorización por propietario | `[x]` Fase 2A completada; 2B pendiente | P1 |
 | Fase 3 | Archivos, notificaciones, auditoría, jobs y seguridad | `[ ]` Pendiente | P2 |
 | Fase 4 | Pruebas de integración, OpenAPI, seeds QA, CI y frontend | `[ ]` Pendiente | P2 |
 
@@ -262,7 +266,11 @@ Si la base actual viene de `ModeloCorregidoLABIFCAT.sql`, revisar:
 
 ---
 
-## 5. Fase 2 — Flujo entre modelos y autorización `[ ]`
+## 5. Fase 2 — Flujo entre modelos y autorización `[x]` (2A cerrada)
+
+> **Estado:** la Fase 2A está implementada y probada. Los puntos de refactor de
+> servicios (Fase 2B) siguen pendientes y no bloquean la integración a `dev`.
+> Ver `INFORME_FASE2A.md`.
 
 ### 5.1 Capa de servicios real
 

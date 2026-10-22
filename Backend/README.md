@@ -48,9 +48,15 @@ npm start
 - **Fase 0:** cerrada en codigo y verificada contra Atlas (seed, login, `/health`).
 - **Fase 1:** implementada (tipologia `NINGUNA`, booleanos estrictos, regex
   escapadas, listas blancas, JWT unificado, migracion y pruebas de regresion).
+- **Fase 2A:** cerrada. Incluye transacciones, maquina de estados, flujo
+  completo solicitud -> cotizacion -> pago -> muestra -> orden -> informe ->
+  encuesta -> descarga, permisos por propietario y endpoints `/mias`/`/mios`.
+  **95 pruebas automatizadas.** Ver `../INFORME_FASE2A.md`.
 - La opcion **NINGUNA** es un valor real del catalogo y no se puede desactivar.
-- Los servicios, uploads, generadores, notificaciones, auditoria automatica y
-  jobs siguen pendientes (fases 2 y 3).
+- **Pendiente Fase 3/4:** uploads reales, PDF/Excel/QR, notificaciones,
+  auditoria automatica, jobs, helmet/rate limit, OpenAPI, CI y frontend.
+- **Pendiente Fase 2B (opcional):** extraer a servicios la logica que aun vive
+  en algunos controladores.
 
 ## Verificacion rapida
 
