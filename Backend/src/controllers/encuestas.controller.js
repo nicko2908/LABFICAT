@@ -6,6 +6,13 @@ import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import Encuesta from '../models/calidad/Encuesta.js';
 import Solicitud from '../models/servicios/Solicitud.js';
+import { responderEncuesta } from '../services/encuesta.service.js';
+import {
+  esCoordinador,
+  obtenerClienteDelUsuario,
+  verificarPropietarioEncuesta,
+  verificarPropietarioSolicitud,
+} from '../utils/propietario.js';
 
 const POPULATE_ENCUESTA = [{ path: 'solicitud', select: 'codigo_solicitud estado cliente' }];
 
@@ -25,27 +32,72 @@ function paginacion(req) {
   return { page, limit, skip: (page - 1) * limit };
 }
 
-/** GET /encuestas — lista paginada. Filtro: solicitud. */
+/** GET /encuestas — lista paginada (coordinador). Filtro: solicitud. */
 async function listar(req, res, next) {
   try {
     const { page, limit, skip } = paginacion(req);
     const filtro = {};
     if (req.query.solicitud) filtro.solicitud = req.query.solicitud;
+
     const [items, total] = await Promise.all([
-      Encuesta.find(filtro).populate(POPULATE_ENCUESTA).sort({ fecha_respuesta: -1 }).skip(skip).limit(limit),
+      Encuesta.find(filtro)
+        .populate(POPULATE_ENCUESTA)
+        .sort({ fecha_respuesta: -1 })
+        .skip(skip)
+        .limit(limit),
       Encuesta.countDocuments(filtro),
     ]);
+
     res.json(new ApiResponse({ items, total, page, pages: Math.ceil(total / limit) || 1 }, 'Encuestas listadas'));
   } catch (err) {
     next(traducirErrorMongoose(err));
   }
 }
 
-/** GET /encuestas/:id — detalle. */
+/** GET /encuestas/mias — encuestas del cliente autenticado. */
+async function listarMias(req, res, next) {
+  try {
+    const cliente = await obtenerClienteDelUsuario(req.usuarioId);
+    const { page, limit, skip } = paginacion(req);
+
+    const solicitudes = await Solicitud.find({ cliente: cliente._id })
+      .select('_id')
+      .lean();
+
+    const filtro = {
+      solicitud: { $in: solicitudes.map((solicitud) => solicitud._id) },
+    };
+
+    const [items, total] = await Promise.all([
+      Encuesta.find(filtro)
+        .populate(POPULATE_ENCUESTA)
+        .sort({ fecha_respuesta: -1 })
+        .skip(skip)
+        .limit(limit),
+      Encuesta.countDocuments(filtro),
+    ]);
+
+    res.json(
+      new ApiResponse(
+        { items, total, page, pages: Math.ceil(total / limit) || 1 },
+        'Mis encuestas listadas'
+      )
+    );
+  } catch (err) {
+    next(traducirErrorMongoose(err));
+  }
+}
+
+/** GET /encuestas/:id — detalle (coordinador o cliente propietario). */
 async function obtenerPorId(req, res, next) {
   try {
     const doc = await Encuesta.findById(req.params.id).populate(POPULATE_ENCUESTA);
     if (!doc) throw ApiError.notFound('Encuesta no encontrada');
+
+    if (!esCoordinador(req.usuario)) {
+      await verificarPropietarioEncuesta(doc, req.usuario);
+    }
+
     res.json(new ApiResponse(doc, 'Encuesta obtenida'));
   } catch (err) {
     next(traducirErrorMongoose(err));
@@ -61,27 +113,17 @@ async function responder(req, res, next) {
   try {
     const { solicitud } = req.body || {};
     if (!solicitud) throw ApiError.badRequest('solicitud es obligatoria');
-    const sol = await Solicitud.exists({ _id: solicitud });
+
+    const sol = await Solicitud.findById(solicitud);
     if (!sol) throw ApiError.badRequest('La solicitud indicada no existe');
-    const previa = await Encuesta.exists({ solicitud });
-    if (previa) throw ApiError.conflict('La solicitud ya tiene encuesta');
 
-    // Lista blanca: evita mass assignment de _id, timestamps y campos de control.
-    const campos = [
-      'solicitud',
-      'satisfaccion_general',
-      'tiempo_entrega',
-      'atencion_personal',
-      'claridad_informe',
-      'recomendaria_servicio',
-      'comentarios',
-    ];
-    const datos = {};
-    for (const campo of campos) {
-      if (req.body && req.body[campo] !== undefined) datos[campo] = req.body[campo];
-    }
+    await verificarPropietarioSolicitud(sol, req.usuario);
 
-    const doc = await Encuesta.create(datos);
+    const doc = await responderEncuesta({
+      solicitudId: sol._id,
+      datos: req.body || {},
+    });
+
     await doc.populate(POPULATE_ENCUESTA);
     res.status(201).json(new ApiResponse(doc, 'Encuesta registrada'));
   } catch (err) {
@@ -111,5 +153,11 @@ async function resumen(req, res, next) {
   }
 }
 
-export { listar, obtenerPorId, responder, resumen };
-export default { listar, obtenerPorId, responder, resumen };
+export { listar, listarMias, obtenerPorId, responder, resumen };
+export default {
+  listar,
+  listarMias,
+  obtenerPorId,
+  responder,
+  resumen,
+};

@@ -13,6 +13,8 @@ import Solicitud from '../models/servicios/Solicitud.js';
 import Cotizacion from '../models/servicios/Cotizacion.js';
 import CuponPago from '../models/servicios/CuponPago.js';
 import Muestra from '../models/laboratorio/Muestra.js';
+import Informe from '../models/calidad/Informe.js';
+import Encuesta from '../models/calidad/Encuesta.js';
 
 function esCoordinador(usuario) {
   return Boolean(usuario && usuario.rol === ROLES.COORDINADOR);
@@ -170,6 +172,52 @@ async function verificarPropietarioOrden(orden, usuario, { session } = {}) {
 }
 
 /**
+ * Verifica el acceso a un informe a traves de su muestra.
+ * @param {import('mongoose').Document|object} informe
+ * @param {{ id?: string, sub?: string, rol?: string }} usuario
+ * @param {{ session?: import('mongoose').ClientSession }} [opciones]
+ * @returns {Promise<{ esPersonal: boolean, cliente: import('mongoose').Document|null }>}
+ */
+async function verificarPropietarioInforme(informe, usuario, { session } = {}) {
+  if (!usuario) throw ApiError.unauthorized();
+  if (esPersonalLaboratorio(usuario)) {
+    return { esPersonal: true, cliente: null };
+  }
+
+  const muestraId = idDe(informe.muestra);
+  let query = Muestra.findById(muestraId);
+  if (session) query = query.session(session);
+  const muestra = await query;
+
+  if (!muestra) throw ApiError.notFound('Muestra no encontrada');
+
+  return verificarPropietarioMuestra(muestra, usuario, { session });
+}
+
+/**
+ * Verifica el acceso a una encuesta a traves de su solicitud.
+ * @param {import('mongoose').Document|object} encuesta
+ * @param {{ id?: string, sub?: string, rol?: string }} usuario
+ * @param {{ session?: import('mongoose').ClientSession }} [opciones]
+ * @returns {Promise<{ esCoordinador: boolean, cliente: import('mongoose').Document|null }>}
+ */
+async function verificarPropietarioEncuesta(encuesta, usuario, { session } = {}) {
+  if (!usuario) throw ApiError.unauthorized();
+  if (esCoordinador(usuario)) {
+    return { esCoordinador: true, cliente: null };
+  }
+
+  const solicitudId = idDe(encuesta.solicitud);
+  let query = Solicitud.findById(solicitudId);
+  if (session) query = query.session(session);
+  const solicitud = await query;
+
+  if (!solicitud) throw ApiError.notFound('Solicitud no encontrada');
+
+  return verificarPropietarioSolicitud(solicitud, usuario, { session });
+}
+
+/**
  * Verifica el acceso a un cupon a traves de su cotizacion.
  * @param {import('mongoose').Document|object} cupon
  * @param {{ id?: string, sub?: string, rol?: string }} usuario
@@ -226,6 +274,8 @@ export {
   verificarPropietarioSoportePago,
   verificarPropietarioMuestra,
   verificarPropietarioOrden,
+  verificarPropietarioInforme,
+  verificarPropietarioEncuesta,
 };
 
 export default {
@@ -239,4 +289,6 @@ export default {
   verificarPropietarioSoportePago,
   verificarPropietarioMuestra,
   verificarPropietarioOrden,
+  verificarPropietarioInforme,
+  verificarPropietarioEncuesta,
 };
