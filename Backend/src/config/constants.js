@@ -84,6 +84,7 @@ const CONFIGURACION_CLAVES = {
   PRODUCCION_CENTRO_NOMBRE: 'PRODUCCION_CENTRO_NOMBRE',
   CUPON_UMBRAL_RECORDATORIO_DIAS: 'CUPON_UMBRAL_RECORDATORIO_DIAS',
   TOKEN_RECUPERACION_MINUTOS: 'TOKEN_RECUPERACION_MINUTOS',
+  RESPONSABLE_LABORATORIO: 'RESPONSABLE_LABORATORIO',
 };
 
 // Parametros de seguridad de la cuenta (RF-27).
@@ -99,10 +100,26 @@ const TIPO_CLIENTE = {
 // Codigo estable de la tipologia "Ninguna de las anteriores" (RF-01).
 // No se identifica por el nombre visible: el nombre puede cambiar.
 const TIPOLOGIA_CODIGO = {
+  // Codigo legado del RF-01 anterior. Se conserva para migraciones; el
+  // catalogo vigente usa 16 categorias comerciales (ver seeds/catalogos.js).
   NINGUNA: 'NINGUNA',
+  // Fallback para registros por tercero cuando no se conoce la tipologia.
+  PERSONA_NATURAL: 'PERSONA_NATURAL',
 };
 
 const TIPOLOGIA_NINGUNA_NOMBRE = 'Ninguna de las anteriores';
+
+// Observaciones preestablecidas de la Recepcion de muestras
+// CAT-ST-MI-F-002 v2. El indice + 1 es el numero que se imprime en el acta.
+const OBSERVACIONES_RECEPCION = [
+  'Recipientes de recolección inadecuados.',
+  'Envase roto, abierto o agujereado.',
+  'Evidencias visibles de microrganismos.',
+  'Evidencias de fermentación.',
+  'Cantidad de muestra sea insuficiente.',
+  'Falta de información o incongruencias en la identificación de los recipientes.',
+  'Otro (explique la situación presentada):',
+];
 
 const ESTADO_SOLICITUD = {
   REGISTRADA: 'Registrada',
@@ -125,6 +142,7 @@ const ESTADO_COTIZACION = {
   PENDIENTE: 'PENDIENTE',
   ACEPTADA: 'ACEPTADA',
   RECHAZADA: 'RECHAZADA',
+  REEMPLAZADA: 'REEMPLAZADA',
 };
 
 const ESTADO_COTIZACION_LISTA = Object.values(ESTADO_COTIZACION);
@@ -200,6 +218,7 @@ export {
   TIPO_CLIENTE,
   TIPOLOGIA_CODIGO,
   TIPOLOGIA_NINGUNA_NOMBRE,
+  OBSERVACIONES_RECEPCION,
   ESTADO_SOLICITUD,
   ESTADO_SOLICITUD_LISTA,
   ESTADO_COTIZACION,

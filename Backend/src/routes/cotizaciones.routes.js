@@ -19,8 +19,10 @@ router.use(autenticar);
 router.get('/mias', permitir('cliente'), ctrl.listarMias);
 router.get('/', permitir('coordinador'), ctrl.listar);
 router.get('/:id/firma', permitir('coordinador'), ctrl.descargarFirma);
+router.get('/:id/excel', permitir('cliente', 'coordinador'), ctrl.exportarExcel);
 router.get('/:id', permitir('cliente', 'coordinador'), ctrl.obtenerPorId);
 router.post('/', permitir('coordinador'), ctrl.crear);
+router.post('/:id/nueva-version', permitir('coordinador'), ctrl.nuevaVersion);
 router.put('/:id', permitir('coordinador'), ctrl.actualizar);
 router.patch('/:id/decision', permitir('cliente'), ctrl.decidir);
 

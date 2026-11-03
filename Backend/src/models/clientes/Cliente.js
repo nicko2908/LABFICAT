@@ -6,12 +6,17 @@
  * lo especifico del cliente.
  *
  * Decisiones:
- *  - tipologia: OBLIGATORIA. Si el cliente no se identifica con ninguna,
- *    se usa la opcion del catalogo "Ninguna de las anteriores" (nunca null).
+ *  - tipologia: OBLIGATORIA. Es la clasificacion comercial de la cotizacion
+ *    (16 categorias). Si el operador no la conoce, se usa "Persona natural".
  *  - nit: unico solo cuando tiene valor (indice parcial), para no chocar entre
  *    clientes persona natural sin NIT.
  *  - SIN campo "activo": la desactivacion (RF-23) se maneja con Usuario.activo.
- *  - tipo_cliente: lo asigna el sistema a partir del correo (ver utils/dominios).
+ *  - tipo_cliente: se deriva SIEMPRE de tipologia.es_interno. Las 4 tipologias
+ *    internas (Aprendices SENA, CampeSENA, Comunidad SENA y Cooperativas de
+ *    Aprendices) liquidan al 0 %; el resto son externas. No se usa el dominio
+ *    del correo.
+ *  - direccion/ciudad/departamento/cargo/persona_contacto: datos que exige la
+ *    plantilla de cotizacion y que se congelan en el snapshot de la cotizacion.
  */
 import mongoose from 'mongoose';
 import { TIPO_CLIENTE } from '../../config/constants.js';
@@ -47,6 +52,13 @@ const clienteSchema = new mongoose.Schema(
       match: [REGEX_TELEFONO, 'El telefono debe tener 10 digitos'],
     },
     razon_social: { type: String, trim: true, maxlength: 100, default: null },
+
+    // Datos que se imprimen en la Oferta de servicios y en el acta de recepcion.
+    direccion: { type: String, trim: true, maxlength: 200, default: null },
+    ciudad: { type: String, trim: true, maxlength: 100, default: null },
+    departamento: { type: String, trim: true, maxlength: 100, default: null },
+    cargo: { type: String, trim: true, maxlength: 100, default: null },
+    persona_contacto: { type: String, trim: true, maxlength: 150, default: null },
 
     // Unico solo cuando hay valor: los clientes sin NIT (null) no colisionan.
     nit: { type: String, trim: true, maxlength: 20, default: null },

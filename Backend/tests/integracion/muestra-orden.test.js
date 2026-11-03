@@ -265,7 +265,7 @@ test('recibe una muestra externa despues del pago aprobado', async () => {
   const muestra = await crearMuestraAceptada(escenario);
 
   assert.equal(muestra.estado_recepcion, ESTADO_RECEPCION_MUESTRA.ACEPTADA);
-  assert.match(muestra.codigo_muestra, /^LAB-\d{4}-\d{4}$/);
+  assert.match(muestra.codigo_muestra, /^\d{4}-\d{4}$/);
 
   const solicitud = await Solicitud.findById(escenario.solicitud._id);
   assert.equal(solicitud.estado, ESTADO_SOLICITUD.EN_ANALISIS);

@@ -25,9 +25,15 @@ import {
   MODULOS,
   TIPOS_DOCUMENTO,
   CONFIGURACION_CLAVES,
-  TIPOLOGIA_CODIGO,
-  TIPOLOGIA_NINGUNA_NOMBRE,
 } from '../config/constants.js';
+import {
+  TIPOLOGIAS_SEMILLA,
+  TIPOLOGIAS_LEGADO,
+  TIPOS_MUESTRA_SEMILLA,
+  PARAMETRO_RESULTADO,
+  ANALISIS_SEMILLA,
+  PRECIO_ANALISIS,
+} from './catalogos.js';
 
 // ---------------------------------------------------------------------------
 // Datos
@@ -101,41 +107,22 @@ const CONFIGURACION_SEMILLA = [
     valor: String(process.env.TOKEN_RECUPERACION_MINUTOS || 30),
     descripcion: 'Vigencia del token de recuperacion de contrasena (RF-27).',
   },
+  {
+    clave: CONFIGURACION_CLAVES.RESPONSABLE_LABORATORIO,
+    valor: process.env.RESPONSABLE_LABORATORIO || 'Responsable LABFICAT',
+    descripcion: 'Nombre del responsable que firma la Oferta de servicios.',
+  },
 ];
 
-// Las 12 tipologias poblacionales iniciales (RF-01).
-// NINGUNA es un valor real del catalogo: se usa como fallback del sistema.
-const TIPOLOGIAS_SEMILLA = [
-  { nombre: 'Indígena', activo: true },
-  { nombre: 'Afrocolombiano, negro, raizal o palenquero', activo: true },
-  { nombre: 'Rrom o gitano', activo: true },
-  { nombre: 'Campesino', activo: true },
-  { nombre: 'Víctima del conflicto armado', activo: true },
-  { nombre: 'Persona con discapacidad', activo: true },
-  { nombre: 'Mujer cabeza de hogar', activo: true },
-  { nombre: 'Población LGBTIQ+', activo: true },
-  { nombre: 'Persona reincorporada o reintegrada', activo: true },
-  { nombre: 'Empresario o emprendedor', activo: true },
-  { nombre: 'Aprendiz, estudiante o egresado', activo: true },
-  { nombre: TIPOLOGIA_NINGUNA_NOMBRE, activo: true, codigo: TIPOLOGIA_CODIGO.NINGUNA },
-];
-
-// Tipos de muestra (ejemplos de prueba).
-const TIPOS_MUESTRA_SEMILLA = [
-  { nombre: 'Agua', estado_fisico: 'LIQUIDO', activo: true },
-  { nombre: 'Sangre', estado_fisico: 'LIQUIDO', activo: true },
-  { nombre: 'Orina', estado_fisico: 'LIQUIDO', activo: true },
-  { nombre: 'Suelo', estado_fisico: 'SOLIDO', activo: true },
-  { nombre: 'Alimento', estado_fisico: 'SOLIDO', activo: true },
-];
-
-// Parametros (ejemplos de prueba).
+// Parametros: se conservan los de ejemplo y se agrega "Resultado", que es el
+// parametro generico que permite registrar un valor por ensayo en la orden.
 const PARAMETROS_SEMILLA = [
   { nombre: 'pH', unidad_medida: 'unidades', activo: true },
   { nombre: 'Turbidez', unidad_medida: 'NTU', activo: true },
   { nombre: 'Conductividad', unidad_medida: 'uS/cm', activo: true },
   { nombre: 'Coliformes totales', unidad_medida: 'UFC/100 mL', activo: true },
   { nombre: 'Solidos totales', unidad_medida: 'mg/L', activo: true },
+  PARAMETRO_RESULTADO,
 ];
 
 // Etapas del proceso (segun el mapa de procesos LABFICAT).
@@ -147,36 +134,12 @@ const ETAPAS_SEMILLA = [
   { nombre: 'Entrega y encuesta', orden: 5, activo: true },
 ];
 
-// Analisis (ejemplos de prueba). Los parametros y tipos de muestra se resuelven
-// por nombre a ObjectId al momento de sembrar.
-const ANALISIS_SEMILLA = [
-  {
-    nombre: 'Analisis fisicoquimico de agua',
-    descripcion: 'Determinacion de parametros fisicoquimicos en muestras de agua.',
-    tarifa_externo: 120000,
-    cantidad_minima: 300,
-    unidad_cantidad: 'ml',
-    parametros: ['pH', 'Turbidez', 'Conductividad'],
-    tipos_muestra: ['Agua'],
-  },
-  {
-    nombre: 'Analisis microbiologico de agua',
-    descripcion: 'Recuento de microorganismos indicadores en muestras de agua.',
-    tarifa_externo: 150000,
-    cantidad_minima: 300,
-    unidad_cantidad: 'ml',
-    parametros: ['Coliformes totales'],
-    tipos_muestra: ['Agua'],
-  },
-  {
-    nombre: 'Analisis de suelo',
-    descripcion: 'Determinacion de parametros fisicoquimicos en muestras de suelo.',
-    tarifa_externo: 180000,
-    cantidad_minima: 300,
-    unidad_cantidad: 'gr',
-    parametros: ['pH', 'Solidos totales'],
-    tipos_muestra: ['Suelo'],
-  },
+// Analisis de ejemplo del catalogo anterior: se desactivan, no se borran,
+// para no romper solicitudes/cotizaciones historicas que los referencian.
+const ANALISIS_LEGADO_NOMBRES = [
+  'Analisis fisicoquimico de agua',
+  'Analisis microbiologico de agua',
+  'Analisis de suelo',
 ];
 
 // Usuario de prueba con rol coordinador (para poder entrar al sistema).
@@ -204,54 +167,126 @@ async function sembrarSiVacio(Modelo, datos, etiqueta) {
 }
 
 /**
- * Sincroniza las tipologias por nombre. No sobrescribe cambios del coordinador
- * y garantiza que NINGUNA tenga su codigo estable.
+ * Sincroniza las 16 tipologias comerciales. Las 4 internas liquidan al 0 %.
+ * Las 12 tipologias del RF-01 anterior se desactivan (no se borran) para
+ * conservar la integridad de los clientes historicos.
  */
 async function sembrarTipologias() {
   await TipologiaPoblacional.bulkWrite(
     TIPOLOGIAS_SEMILLA.map((tipologia) => ({
       updateOne: {
         filter: { nombre: tipologia.nombre },
-        update: { $setOnInsert: tipologia },
+        update: {
+          $set: {
+            codigo: tipologia.codigo,
+            es_interno: Boolean(tipologia.es_interno),
+            activo: tipologia.activo !== false,
+            descripcion: tipologia.descripcion || null,
+          },
+        },
         upsert: true,
       },
     }))
   );
 
-  await TipologiaPoblacional.updateOne(
-    { nombre: TIPOLOGIA_NINGUNA_NOMBRE },
-    { $set: { codigo: TIPOLOGIA_CODIGO.NINGUNA } }
+  await TipologiaPoblacional.updateMany(
+    { nombre: { $in: TIPOLOGIAS_LEGADO } },
+    { $set: { activo: false } }
   );
 
-  const total = await TipologiaPoblacional.countDocuments();
-  console.log(`[seed] Tipologias disponibles: ${total}`);
+  const total = await TipologiaPoblacional.countDocuments({ activo: true });
+  console.log(`[seed] Tipologias activas: ${total}`);
 }
 
+/** Sincroniza las presentaciones de muestra de la recepcion. */
+async function sembrarTiposMuestra() {
+  await TipoMuestra.bulkWrite(
+    TIPOS_MUESTRA_SEMILLA.map((tipo) => ({
+      updateOne: {
+        filter: { nombre: tipo.nombre },
+        update: { $set: tipo },
+        upsert: true,
+      },
+    }))
+  );
+
+  // Los tipos de muestra del catalogo anterior quedan inactivos, pero no se
+  // eliminan porque pueden estar referenciados por muestras historicas.
+  await TipoMuestra.updateMany(
+    { nombre: { $in: ['Agua', 'Sangre', 'Orina', 'Suelo', 'Alimento'] } },
+    { $set: { activo: false } }
+  );
+
+  const total = await TipoMuestra.countDocuments({ activo: true });
+  console.log(`[seed] Tipos de muestra activos: ${total}`);
+}
+
+/** Sincroniza los parametros, incluido el generico "Resultado". */
+async function sembrarParametros() {
+  await Parametro.bulkWrite(
+    PARAMETROS_SEMILLA.map((parametro) => ({
+      updateOne: {
+        filter: { nombre: parametro.nombre },
+        update: { $set: parametro },
+        upsert: true,
+      },
+    }))
+  );
+
+  const total = await Parametro.countDocuments({ activo: true });
+  console.log(`[seed] Parametros activos: ${total}`);
+}
+
+/**
+ * Sincroniza los 35 ensayos por codigo. Cada ensayo referencia el parametro
+ * generico "Resultado" para que una orden pueda registrar un valor y finalizar.
+ */
 async function sembrarAnalisis() {
-  const total = await Analisis.estimatedDocumentCount();
-  if (total > 0) {
-    console.log(`[seed] Analisis: ya existen ${total}, no se siembran.`);
-    return;
+  const resultado = await Parametro.findOne({ nombre: PARAMETRO_RESULTADO.nombre });
+  if (!resultado) {
+    throw new Error('No se encontro el parametro generico "Resultado"');
   }
 
-  const parametros = await Parametro.find({ nombre: { $in: PARAMETROS_SEMILLA.map((p) => p.nombre) } });
-  const tipos = await TipoMuestra.find({ nombre: { $in: TIPOS_MUESTRA_SEMILLA.map((t) => t.nombre) } });
-  const idParametro = new Map(parametros.map((p) => [p.nombre, p._id]));
-  const idTipo = new Map(tipos.map((t) => [t.nombre, t._id]));
+  await Analisis.bulkWrite(
+    ANALISIS_SEMILLA.map((analisis) => {
+      const descripcion = `${analisis.nombre}${analisis.acreditado ? '°' : ''} - ${analisis.tecnica || ''}`
+        .trim()
+        .slice(0, 200);
 
-  const docs = ANALISIS_SEMILLA.map((a) => ({
-    nombre: a.nombre,
-    descripcion: a.descripcion,
-    tarifa_externo: a.tarifa_externo,
-    cantidad_minima: a.cantidad_minima,
-    unidad_cantidad: a.unidad_cantidad,
-    parametros: a.parametros.map((n) => idParametro.get(n)).filter(Boolean),
-    tipos_muestra: a.tipos_muestra.map((n) => idTipo.get(n)).filter(Boolean),
-    activo: true,
-  }));
+      return {
+        updateOne: {
+          filter: { codigo: analisis.codigo },
+          update: {
+            $set: {
+              codigo: analisis.codigo,
+              nombre: analisis.nombre,
+              descripcion,
+              unidades: analisis.unidades,
+              metodo: analisis.metodo,
+              tecnica: analisis.tecnica,
+              acreditado: Boolean(analisis.acreditado),
+              tarifa_externo: PRECIO_ANALISIS,
+              cantidad_minima: 0,
+              unidad_cantidad: null,
+              parametros: [resultado._id],
+              tipos_muestra: [],
+              activo: true,
+            },
+          },
+          upsert: true,
+        },
+      };
+    })
+  );
 
-  await Analisis.insertMany(docs);
-  console.log(`[seed] Analisis sembrados: ${docs.length}`);
+  // Los tres analisis de ejemplo del catalogo anterior se desactivan.
+  await Analisis.updateMany(
+    { nombre: { $in: ANALISIS_LEGADO_NOMBRES } },
+    { $set: { activo: false } }
+  );
+
+  const total = await Analisis.countDocuments({ codigo: { $ne: null }, activo: true });
+  console.log(`[seed] Analisis activos con codigo: ${total}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -281,8 +316,8 @@ async function seed() {
 
     // 3. Catalogos
     await sembrarTipologias();
-    await sembrarSiVacio(TipoMuestra, TIPOS_MUESTRA_SEMILLA, 'Tipos de muestra');
-    await sembrarSiVacio(Parametro, PARAMETROS_SEMILLA, 'Parametros');
+    await sembrarTiposMuestra();
+    await sembrarParametros();
     await sembrarSiVacio(EtapaProceso, ETAPAS_SEMILLA, 'Etapas de proceso');
     await sembrarAnalisis();
 

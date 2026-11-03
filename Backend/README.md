@@ -36,8 +36,9 @@ npm start
 - **Supabase (opcional en local):** `SUPABASE_URL` y `API_KEY_SUPABASE`.
   Si no estan configuradas, la API funciona igual y solo los endpoints de
   firma digital responden `503 Storage no configurado`.
-- **Negocio:** `CUPON_VIGENCIA_DIAS` (por defecto 5), `CUPON_UMBRAL_RECORDATORIO_DIAS`
-  y `TOKEN_RECUPERACION_MINUTOS`.
+- **Negocio:** `CUPON_VIGENCIA_DIAS` (por defecto 5), `CUPON_UMBRAL_RECORDATORIO_DIAS`,
+  `TOKEN_RECUPERACION_MINUTOS` y `RESPONSABLE_LABORATORIO` (nombre que firma la
+  Oferta de servicios en Excel).
   La vigencia del cupon se lee al arrancar: **un cambio requiere reiniciar el proceso**.
 - **Correo (opcional hasta Fase 3):** `MAIL_HOST`, `MAIL_USER`, `MAIL_PASS`, `MAIL_FROM`.
   Si falta configuracion real, el backend arranca y solo advierte; las
@@ -46,17 +47,25 @@ npm start
 ## Estado de implementacion
 
 - **Fase 0:** cerrada en codigo y verificada contra Atlas (seed, login, `/health`).
-- **Fase 1:** implementada (tipologia `NINGUNA`, booleanos estrictos, regex
-  escapadas, listas blancas, JWT unificado, migracion y pruebas de regresion).
+- **Fase 1:** implementada (booleanos estrictos, regex escapadas, listas
+  blancas, JWT unificado, migracion y pruebas de regresion).
 - **Fase 2A:** cerrada. Incluye transacciones, maquina de estados, flujo
   completo solicitud -> cotizacion -> pago -> muestra -> orden -> informe ->
   encuesta -> descarga, permisos por propietario y endpoints `/mias`/`/mios`.
-  **95 pruebas automatizadas.** Ver `../INFORME_FASE2A.md`.
-- La opcion **NINGUNA** es un valor real del catalogo y no se puede desactivar.
-- **Pendiente Fase 3/4:** uploads reales, PDF/Excel/QR, notificaciones,
-  auditoria automatica, jobs, helmet/rate limit, OpenAPI, CI y frontend.
-- **Pendiente Fase 2B (opcional):** extraer a servicios la logica que aun vive
-  en algunos controladores.
+- **Fase 2B:** cerrada. Toda la logica de negocio vive en `services/`; los
+  controladores solo traducen HTTP -> service -> respuesta. Se eliminaron los
+  servicios stub y se centralizaron paginacion, traduccion de errores de
+  Mongoose y lectura del actor autenticado.
+  **119 pruebas automatizadas.**
+- **Plantillas (Fase 3 parcial):** cotizacion versionada con items, catalogo de
+  35 ensayos, 16 tipologias comerciales, codigos atomicos y generadores Excel
+  de Oferta de servicios y Acta de recepcion.
+- **Regla de negocio:** las 4 tipologias internas son **Aprendices SENA,
+  CampeSENA, Comunidad SENA y Cooperativas de Aprendices**; liquidan al 0 %.
+  Las otras 12 son externas y pagan la tarifa del catalogo. El tipo de cliente
+  se deriva de la tipologia, **no del dominio del correo**.
+- **Pendiente Fase 3/4:** uploads reales, PDF/QR, notificaciones, auditoria
+  automatica, jobs, helmet/rate limit, OpenAPI, CI y frontend.
 
 ## Verificacion rapida
 
@@ -82,7 +91,7 @@ indicando su ruta:
 
 ```powershell
 # Windows / PowerShell
-$env:MONGOMS_SYSTEM_BINARY="C:\Program Files\MongoDB\Server\8.2\bin\mongod.exe"
+$env:MONGOMS_SYSTEM_BINARY="C:\Program Files\MongoDB\Server\8.3\bin\mongod.exe"
 npm test
 ```
 
@@ -102,14 +111,26 @@ permite transacciones sobre replica sets.
 # Crea/actualiza roles, configuracion, catalogos y usuario de prueba
 npm run seed
 
-# Migra clientes con tipologia null a NINGUNA (idempotente)
-npm run migrar:tipologia
+# Migraciones sobre bases existentes (idempotentes)
+npm run migrar:catalogos   # 16 tipologias, tipos de muestra, parametro Resultado y 35 ensayos
+npm run migrar:plan        # version/items/codigos/snapshot, muestras, clientes e indices
+npm run migrar:tipologia   # legado: solo si aun no existe el catalogo nuevo
 ```
 
-`npm run seed` sincroniza las 12 tipologias por nombre y garantiza el codigo
-`NINGUNA` sin sobrescribir cambios hechos por el coordinador. La migracion es
-independiente del seed y debe ejecutarse sobre bases existentes antes de
-desplegar la Fase 1.
+`npm run seed` sincroniza las **16 tipologias comerciales** (4 internas), las
+presentaciones de muestra, el parametro generico `Resultado` y los **35
+ensayos** por `codigo`. Las 12 tipologias del RF-01 anterior se desactivan, no
+se borran. Las plantillas Excel sanitizadas viven en `src/templates/excel/`;
+se regeneran con `npm run plantillas:preparar`.
+
+### Generadores Excel
+
+- `GET /api/v1/cotizaciones/:id/excel` — Oferta de servicios (`NNNN-AAAAV#`).
+- `GET /api/v1/muestras/:id/acta-recepcion` — Acta de recepcion (`NNNN-AAAA`).
+
+La plantilla de cotizacion imprime un solo bloque de item (hasta 3 ensayos),
+igual que el formato oficial. Si la cotizacion tiene varios items, el endpoint
+devuelve el primero y agrega el header `X-Advertencia`.
 
 ## Estructura
 

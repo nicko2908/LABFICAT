@@ -30,9 +30,9 @@ La Fase 0 (arranque reproducible) quedó completada y verificada. El backend ya:
 - funciona sin Supabase configurado (el storage responde `503` solo cuando se usa),
 - tiene una prueba de humo automatizada.
 
-> **Actualización 22/10/2026:** la Fase 2A quedó cerrada con 95 pruebas
-> automatizadas y una prueba E2E del flujo completo. Ver `INFORME_FASE2A.md`.
-> La Fase 2B (refactor opcional de servicios) sigue pendiente.
+> **Actualización 03/11/2026:** las fases 2A y 2B quedaron cerradas. La logica
+> de negocio vive en `services/` y los controladores solo orquestan HTTP.
+> **119 pruebas automatizadas.** Ver `INFORME_FASE2B.md`.
 
 Lo que queda es principalmente **capa de producción**: archivos reales, notificaciones, auditoría automática, jobs, seguridad, documentación, CI y frontend.
 
@@ -40,7 +40,7 @@ Lo que queda es principalmente **capa de producción**: archivos reales, notific
 |---|---|---|---|
 | Fase 0 | Arranque, entorno, Supabase perezoso, modelos registrados, smoke test | `[x]` Completada y verificada contra Atlas | P0 |
 | Fase 1 | Compatibilidad modelo ↔ controlador ↔ rutas | `[x]` Implementada y probada | P0/P1 |
-| Fase 2 | Flujo entre modelos y autorización por propietario | `[x]` Fase 2A completada; 2B pendiente | P1 |
+| Fase 2 | Flujo entre modelos y autorización por propietario | `[x]` Fases 2A y 2B completadas | P1 |
 | Fase 3 | Archivos, notificaciones, auditoría, jobs y seguridad | `[ ]` Pendiente | P2 |
 | Fase 4 | Pruebas de integración, OpenAPI, seeds QA, CI y frontend | `[ ]` Pendiente | P2 |
 
@@ -268,21 +268,25 @@ Si la base actual viene de `ModeloCorregidoLABIFCAT.sql`, revisar:
 
 ## 5. Fase 2 — Flujo entre modelos y autorización `[x]` (2A cerrada)
 
-> **Estado:** la Fase 2A está implementada y probada. Los puntos de refactor de
-> servicios (Fase 2B) siguen pendientes y no bloquean la integración a `dev`.
-> Ver `INFORME_FASE2A.md`.
+> **Estado:** la Fase 2A esta implementada y probada. La Fase 2B (refactor de
+> servicios) tambien esta cerrada: los controladores ya no acceden a modelos.
+> Ver `INFORME_FASE2B.md`.
 
 ### 5.1 Capa de servicios real
 
-Hoy los servicios son stubs (`export default {}`). Implementar:
+La logica de negocio se extrajo a `services/`. Los controladores solo traducen
+HTTP -> service -> respuesta.
 
-- `[ ]` `services/solicitud.service.js`
-- `[ ]` `services/cotizacion.service.js`
-- `[ ]` `services/pago.service.js`
-- `[ ]` `services/muestra.service.js`
-- `[ ]` `services/orden.service.js`
-- `[ ]` `services/informe.service.js`
-- `[ ]` Opcional: `services/flujo.service.js` como orquestador
+- `[x]` `services/solicitud.service.js`
+- `[x]` `services/cotizacion.service.js`
+- `[x]` `services/pago.service.js`
+- `[x]` `services/muestra.service.js`
+- `[x]` `services/orden.service.js`
+- `[x]` `services/informe.service.js`
+- `[x]` `services/flujo.service.js` como orquestador
+- `[x]` `services/auth.service.js`, `cliente.service.js`, `catalogos.service.js`
+- `[x]` `services/reclamacion.service.js`, `auditoria.service.js`, `reporte.service.js`
+- `[x]` `services/rotulo.service.js`, `seguimiento.service.js`
 
 ### 5.2 Máquina de estados
 
