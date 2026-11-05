@@ -8,18 +8,26 @@
  *  - El valor del cupon debe coincidir con el total de la cotizacion.
  */
 import ApiError from '../utils/ApiError.js';
+import { paginacion } from '../utils/paginacion.js';
 import {
   ESTADO_COTIZACION,
   ESTADO_CUPON,
+  ESTADO_CUPON_LISTA,
   ESTADO_SOLICITUD,
   TIPO_CLIENTE,
 } from '../config/constants.js';
+import { puedeTransicionarCupon } from '../config/estados.js';
 import env from '../config/env.js';
 import CuponPago from '../models/servicios/CuponPago.js';
 import Cotizacion from '../models/servicios/Cotizacion.js';
 import Solicitud from '../models/servicios/Solicitud.js';
 import Cliente from '../models/clientes/Cliente.js';
 import { conTransaccion } from './flujo.service.js';
+
+const POPULATE_CUPON = [
+  { path: 'cotizacion', select: 'valor_total estado solicitud' },
+  { path: 'solicitado_por', select: 'nombres apellidos correo' },
+];
 
 /**
  * Crea el cupon manual de una cotizacion aceptada de cliente externo.
@@ -70,6 +78,12 @@ async function crearCupon({ cotizacionId, valor, usuarioId }) {
     }
 
     const valorEsperado = Number(cotizacion.valor_total);
+
+    // Los clientes internos y las cotizaciones en 0 no requieren cupon.
+    if (valorEsperado === 0) {
+      throw ApiError.conflict('La cotizacion no requiere cupon porque su valor es 0');
+    }
+
     const valorFinal =
       valor === undefined || valor === null ? valorEsperado : Number(valor);
 
@@ -136,5 +150,123 @@ async function generarCupon({ cuponId, codigoCupon }) {
   return cupon;
 }
 
-export { crearCupon, generarCupon };
-export default { crearCupon, generarCupon };
+/** Popula el cupon con sus referencias. */
+function poblarCupon(doc) {
+  return doc.populate(POPULATE_CUPON);
+}
+
+/** GET /cupones — lista paginada (coordinador). */
+async function listar(query = {}) {
+  const { page, limit, skip } = paginacion(query);
+  const filtro = {};
+  if (query.estado) {
+    if (!ESTADO_CUPON_LISTA.includes(query.estado)) {
+      throw ApiError.badRequest('estado invalido');
+    }
+    filtro.estado = query.estado;
+  }
+  if (query.cotizacion) filtro.cotizacion = query.cotizacion;
+
+  const [items, total] = await Promise.all([
+    CuponPago.find(filtro)
+      .populate(POPULATE_CUPON)
+      .sort({ fecha_solicitud: -1 })
+      .skip(skip)
+      .limit(limit),
+    CuponPago.countDocuments(filtro),
+  ]);
+
+  return { items, total, page, pages: Math.ceil(total / limit) || 1 };
+}
+
+/** GET /cupones/mios — cupones de las solicitudes del cliente. */
+async function listarMios(clienteId, query = {}) {
+  const { page, limit, skip } = paginacion(query);
+
+  const solicitudes = await Solicitud.find({ cliente: clienteId }).select('_id').lean();
+  const cotizaciones = await Cotizacion.find({
+    solicitud: { $in: solicitudes.map((solicitud) => solicitud._id) },
+  })
+    .select('_id')
+    .lean();
+
+  const filtro = {
+    cotizacion: { $in: cotizaciones.map((cotizacion) => cotizacion._id) },
+  };
+
+  if (query.estado) {
+    if (!ESTADO_CUPON_LISTA.includes(query.estado)) {
+      throw ApiError.badRequest('estado invalido');
+    }
+    filtro.estado = query.estado;
+  }
+
+  const [items, total] = await Promise.all([
+    CuponPago.find(filtro)
+      .populate(POPULATE_CUPON)
+      .sort({ fecha_solicitud: -1 })
+      .skip(skip)
+      .limit(limit),
+    CuponPago.countDocuments(filtro),
+  ]);
+
+  return { items, total, page, pages: Math.ceil(total / limit) || 1 };
+}
+
+/** GET /cupones/:id */
+async function obtenerPorId(id) {
+  const doc = await CuponPago.findById(id).populate(POPULATE_CUPON);
+  if (!doc) throw ApiError.notFound('Cupon no encontrado');
+  return doc;
+}
+
+/** POST /cupones/:id/recordatorios — RF-24. */
+async function registrarRecordatorio(id) {
+  const doc = await CuponPago.findById(id);
+  if (!doc) throw ApiError.notFound('Cupon no encontrado');
+  doc.recordatorios.push({ fecha_envio: new Date() });
+  await doc.save();
+  await doc.populate(POPULATE_CUPON);
+  return doc;
+}
+
+/** PATCH /cupones/:id/estado — UTILIZADO o VENCIDO. */
+async function cambiarEstado(id, body = {}) {
+  const { estado } = body;
+  if (![ESTADO_CUPON.UTILIZADO, ESTADO_CUPON.VENCIDO].includes(estado)) {
+    throw ApiError.badRequest('estado debe ser UTILIZADO o VENCIDO');
+  }
+
+  const doc = await CuponPago.findById(id);
+  if (!doc) throw ApiError.notFound('Cupon no encontrado');
+
+  if (!puedeTransicionarCupon(doc.estado, estado)) {
+    throw ApiError.conflict(`Transicion invalida de cupon: "${doc.estado}" -> "${estado}"`);
+  }
+
+  doc.estado = estado;
+  await doc.save();
+  await doc.populate(POPULATE_CUPON);
+  return { doc, estado };
+}
+
+export {
+  crearCupon,
+  generarCupon,
+  poblarCupon,
+  listar,
+  listarMios,
+  obtenerPorId,
+  registrarRecordatorio,
+  cambiarEstado,
+};
+export default {
+  crearCupon,
+  generarCupon,
+  poblarCupon,
+  listar,
+  listarMios,
+  obtenerPorId,
+  registrarRecordatorio,
+  cambiarEstado,
+};

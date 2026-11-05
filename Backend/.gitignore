@@ -21,3 +21,9 @@ npm-debug.log*
 Thumbs.db
 .vscode/
 .idea/
+.vs/
+scripts/logs/
+
+# Artefactos locales de pruebas
+test-*.log
+test-baseline.log

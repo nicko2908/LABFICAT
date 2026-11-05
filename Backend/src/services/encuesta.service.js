@@ -8,10 +8,13 @@
  *  - recomendaria_servicio es booleano.
  */
 import ApiError from '../utils/ApiError.js';
+import { paginacion } from '../utils/paginacion.js';
 import { ESTADO_SOLICITUD } from '../config/constants.js';
 import { parseBoolean } from '../utils/booleanos.js';
 import Encuesta from '../models/calidad/Encuesta.js';
 import Solicitud from '../models/servicios/Solicitud.js';
+
+const POPULATE_ENCUESTA = [{ path: 'solicitud', select: 'codigo_solicitud estado cliente' }];
 
 const CAMPOS_PUNTAJE = [
   'satisfaccion_general',
@@ -81,5 +84,95 @@ async function responderEncuesta({ solicitudId, datos = {} }) {
   return encuesta;
 }
 
-export { responderEncuesta };
-export default { responderEncuesta };
+/** Popula la encuesta con sus referencias. */
+function poblarEncuesta(doc) {
+  return doc.populate(POPULATE_ENCUESTA);
+}
+
+/** GET /encuestas */
+async function listar(query = {}) {
+  const { page, limit, skip } = paginacion(query);
+  const filtro = {};
+  if (query.solicitud) filtro.solicitud = query.solicitud;
+
+  const [items, total] = await Promise.all([
+    Encuesta.find(filtro)
+      .populate(POPULATE_ENCUESTA)
+      .sort({ fecha_respuesta: -1 })
+      .skip(skip)
+      .limit(limit),
+    Encuesta.countDocuments(filtro),
+  ]);
+
+  return { items, total, page, pages: Math.ceil(total / limit) || 1 };
+}
+
+/** GET /encuestas/mias */
+async function listarMias(clienteId, query = {}) {
+  const { page, limit, skip } = paginacion(query);
+
+  const solicitudes = await Solicitud.find({ cliente: clienteId }).select('_id').lean();
+  const filtro = { solicitud: { $in: solicitudes.map((solicitud) => solicitud._id) } };
+
+  const [items, total] = await Promise.all([
+    Encuesta.find(filtro)
+      .populate(POPULATE_ENCUESTA)
+      .sort({ fecha_respuesta: -1 })
+      .skip(skip)
+      .limit(limit),
+    Encuesta.countDocuments(filtro),
+  ]);
+
+  return { items, total, page, pages: Math.ceil(total / limit) || 1 };
+}
+
+/** GET /encuestas/:id */
+async function obtenerPorId(id) {
+  const doc = await Encuesta.findById(id).populate(POPULATE_ENCUESTA);
+  if (!doc) throw ApiError.notFound('Encuesta no encontrada');
+  return doc;
+}
+
+/** Solicitud asociada (para autorizar antes de responder). */
+async function obtenerSolicitud(solicitudId) {
+  const sol = await Solicitud.findById(solicitudId);
+  if (!sol) throw ApiError.badRequest('La solicitud indicada no existe');
+  return sol;
+}
+
+/** GET /encuestas/resumen/global — promedios 1-5 y % recomendacion. */
+async function resumen() {
+  const [agg] = await Encuesta.aggregate([
+    {
+      $group: {
+        _id: null,
+        total: { $sum: 1 },
+        satisfaccion_general: { $avg: '$satisfaccion_general' },
+        tiempo_entrega: { $avg: '$tiempo_entrega' },
+        atencion_personal: { $avg: '$atencion_personal' },
+        claridad_informe: { $avg: '$claridad_informe' },
+        recomiendan: { $sum: { $cond: ['$recomendaria_servicio', 1, 0] } },
+      },
+    },
+  ]);
+  return agg || { total: 0 };
+}
+
+export {
+  responderEncuesta,
+  poblarEncuesta,
+  listar,
+  listarMias,
+  obtenerPorId,
+  obtenerSolicitud,
+  resumen,
+};
+export default {
+  responderEncuesta,
+  poblarEncuesta,
+  listar,
+  listarMias,
+  obtenerPorId,
+  obtenerSolicitud,
+  resumen,
+};

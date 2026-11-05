@@ -71,6 +71,16 @@ async function main() {
     await connectDB();
     await TipologiaPoblacional.createIndexes();
 
+    // Migracion legado: si ya existe el catalogo nuevo (Persona natural),
+    // no reactivar NINGUNA. Usar npm run migrar:catalogos.
+    const personaNatural = await TipologiaPoblacional.findOne({
+      codigo: 'PERSONA_NATURAL',
+    }).lean();
+    if (personaNatural) {
+      console.log('[migracion] 001 es legado: el catalogo nuevo ya existe. Use npm run migrar:catalogos.');
+      return;
+    }
+
     const ninguna = await obtenerNinguna();
 
     const antes = await Cliente.countDocuments(FILTRO_SIN_TIPOLOGIA);

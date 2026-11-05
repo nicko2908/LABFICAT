@@ -1,18 +1,18 @@
 /**
- * Util: resolucion y validacion de tipologias poblacionales (RF-01).
+ * Util: resolucion y validacion de tipologias (RF-01 / cotizacion).
  *
- * Politica aplicada (hibrida):
+ * El catalogo vigente tiene 16 categorias comerciales. Las 4 marcadas con
+ * es_interno=true son clientes internos (tarifa 0); el resto son externos.
+ *
+ * Politica de registro:
  *  - Autorregistro (auth.registrar): la tipologia es OBLIGATORIA.
  *  - Registro por tercero (clientes.crear): si no se conoce, se asigna
- *    la tipologia del catalogo con codigo NINGUNA.
+ *    "Persona natural" (externa).
  *  - Actualizacion: nunca se acepta null/vacio.
- *
- * La busqueda por ID se hace con manejo explicito de CastError para que un
- * identificador mal formado responda 400 y no 500.
  */
 import ApiError from './ApiError.js';
 import TipologiaPoblacional from '../models/clientes/TipologiaPoblacional.js';
-import { TIPOLOGIA_CODIGO } from '../config/constants.js';
+import { TIPOLOGIA_CODIGO, TIPO_CLIENTE } from '../config/constants.js';
 
 async function buscarTipologiaPorId(id) {
   try {
@@ -26,12 +26,24 @@ async function buscarTipologiaPorId(id) {
 }
 
 /**
+ * Determina INTERNO/EXTERNO a partir de la tipologia. No usa el correo.
+ *
+ * @param {{ es_interno?: boolean }|null|undefined} tipologia
+ * @returns {'INTERNO'|'EXTERNO'}
+ */
+function tipoClienteDeTipologia(tipologia) {
+  return tipologia && tipologia.es_interno
+    ? TIPO_CLIENTE.INTERNO
+    : TIPO_CLIENTE.EXTERNO;
+}
+
+/**
  * Devuelve el documento de tipologia solicitado.
  *
  * @param {unknown} valor ObjectId recibido en el body.
  * @param {{ obligatoria?: boolean }} [opciones]
  *   obligatoria=true  -> si falta, responde 400.
- *   obligatoria=false -> si falta, usa la tipologia NINGUNA.
+ *   obligatoria=false -> si falta, usa "Persona natural".
  * @returns {Promise<import('mongoose').Document>}
  */
 async function resolverTipologia(valor, { obligatoria = true } = {}) {
@@ -42,19 +54,19 @@ async function resolverTipologia(valor, { obligatoria = true } = {}) {
       throw ApiError.badRequest('tipologia es obligatoria');
     }
 
-    const ninguna = await TipologiaPoblacional.findOne({
-      codigo: TIPOLOGIA_CODIGO.NINGUNA,
+    const personaNatural = await TipologiaPoblacional.findOne({
+      codigo: TIPOLOGIA_CODIGO.PERSONA_NATURAL,
       activo: true,
     });
 
-    if (!ninguna) {
+    if (!personaNatural) {
       throw new ApiError(
         500,
-        'La tipologia NINGUNA no esta sembrada. Ejecute npm run seed o la migracion de tipologia'
+        'La tipologia PERSONA NATURAL no esta sembrada. Ejecute npm run seed o la migracion de catalogos'
       );
     }
 
-    return ninguna;
+    return personaNatural;
   }
 
   const doc = await buscarTipologiaPorId(valor);
@@ -64,5 +76,5 @@ async function resolverTipologia(valor, { obligatoria = true } = {}) {
   return doc;
 }
 
-export { resolverTipologia };
-export default { resolverTipologia };
+export { resolverTipologia, tipoClienteDeTipologia };
+export default { resolverTipologia, tipoClienteDeTipologia };

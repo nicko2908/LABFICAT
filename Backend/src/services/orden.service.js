@@ -9,6 +9,7 @@
  *  - Solo se repite una orden INVALIDADA.
  */
 import ApiError from '../utils/ApiError.js';
+import { paginacion } from '../utils/paginacion.js';
 import {
   ESTADO_ORDEN,
   ESTADO_ORDEN_LISTA,
@@ -20,6 +21,15 @@ import OrdenAnalisis from '../models/laboratorio/OrdenAnalisis.js';
 import Muestra from '../models/laboratorio/Muestra.js';
 import Analisis from '../models/laboratorio/Analisis.js';
 import Solicitud from '../models/servicios/Solicitud.js';
+import Cotizacion from '../models/servicios/Cotizacion.js';
+
+const POPULATE_ORDEN = [
+  { path: 'muestra', select: 'codigo_muestra estado_recepcion prioridad solicitud' },
+  { path: 'analisis', select: 'nombre tarifa_externo' },
+  { path: 'usuario', select: 'nombres apellidos correo' },
+  { path: 'resultados.parametro', select: 'nombre unidad_medida' },
+  { path: 'orden_anterior', select: 'numero_iteracion estado' },
+];
 
 async function validarResultadosCompletos(orden) {
   const analisis = await Analisis.findById(orden.analisis)
@@ -84,11 +94,30 @@ async function crearOrden({
   if (!analisis) throw ApiError.badRequest('El analisis indicado no existe');
   if (!analisis.activo) throw ApiError.badRequest('El analisis indicado esta inactivo');
 
-  const pertenece = (solicitud.analisis || []).some(
-    (id) => String(id) === String(analisis._id)
-  );
+  // La orden debe usar un ensayo del ITEM de la cotizacion de la muestra.
+  // Para datos legados sin cotizacion se cae al listado de la solicitud.
+  let analisisDelItem = null;
+  if (muestra.cotizacion) {
+    const cotizacion = await Cotizacion.findById(muestra.cotizacion).lean();
+    if (cotizacion) {
+      const items = Array.isArray(cotizacion.items) && cotizacion.items.length > 0
+        ? cotizacion.items
+        : [{ numero: 1, detalle: cotizacion.detalle || [] }];
+      const item = items.find(
+        (i) => Number(i.numero) === Number(muestra.cotizacion_item || 1)
+      );
+      analisisDelItem = new Set(
+        (item?.detalle || []).map((linea) => String(linea.analisis))
+      );
+    }
+  }
+
+  const pertenece = analisisDelItem
+    ? analisisDelItem.has(String(analisis._id))
+    : (solicitud.analisis || []).some((id) => String(id) === String(analisis._id));
+
   if (!pertenece) {
-    throw ApiError.badRequest('El analisis indicado no pertenece a la solicitud');
+    throw ApiError.badRequest('El analisis indicado no pertenece al item de la muestra');
   }
 
   if (
@@ -102,6 +131,7 @@ async function crearOrden({
   }
 
   if (
+    muestra.unidad_medida &&
     analisis.unidad_cantidad &&
     analisis.unidad_cantidad !== muestra.unidad_medida
   ) {
@@ -308,15 +338,92 @@ async function repetirOrden({ ordenId, usuarioId, observaciones = null }) {
   });
 }
 
+/** Popula la orden con sus referencias. */
+function poblarOrden(doc) {
+  return doc.populate(POPULATE_ORDEN);
+}
+
+/** GET /ordenes */
+async function listar(query = {}) {
+  const { page, limit, skip } = paginacion(query);
+  const filtro = {};
+  if (query.estado) {
+    if (!ESTADO_ORDEN_LISTA.includes(query.estado)) {
+      throw ApiError.badRequest('estado invalido');
+    }
+    filtro.estado = query.estado;
+  }
+  if (query.muestra) filtro.muestra = query.muestra;
+  if (query.analisis) filtro.analisis = query.analisis;
+  if (query.usuario) filtro.usuario = query.usuario;
+
+  const [items, total] = await Promise.all([
+    OrdenAnalisis.find(filtro)
+      .populate(POPULATE_ORDEN)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    OrdenAnalisis.countDocuments(filtro),
+  ]);
+
+  return { items, total, page, pages: Math.ceil(total / limit) || 1 };
+}
+
+/** GET /ordenes/mias — ordenes de las muestras del cliente. */
+async function listarMias(clienteId, query = {}) {
+  const { page, limit, skip } = paginacion(query);
+
+  const solicitudes = await Solicitud.find({ cliente: clienteId }).select('_id').lean();
+  const muestras = await Muestra.find({
+    solicitud: { $in: solicitudes.map((solicitud) => solicitud._id) },
+  })
+    .select('_id')
+    .lean();
+
+  const filtro = { muestra: { $in: muestras.map((muestra) => muestra._id) } };
+  if (query.estado) {
+    if (!ESTADO_ORDEN_LISTA.includes(query.estado)) {
+      throw ApiError.badRequest('estado invalido');
+    }
+    filtro.estado = query.estado;
+  }
+
+  const [items, total] = await Promise.all([
+    OrdenAnalisis.find(filtro)
+      .populate(POPULATE_ORDEN)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    OrdenAnalisis.countDocuments(filtro),
+  ]);
+
+  return { items, total, page, pages: Math.ceil(total / limit) || 1 };
+}
+
+/** GET /ordenes/:id */
+async function obtenerPorId(id) {
+  const doc = await OrdenAnalisis.findById(id).populate(POPULATE_ORDEN);
+  if (!doc) throw ApiError.notFound('Orden no encontrada');
+  return doc;
+}
+
 export {
   crearOrden,
   avanzarEstadoOrden,
   registrarResultadosOrden,
   repetirOrden,
+  poblarOrden,
+  listar,
+  listarMias,
+  obtenerPorId,
 };
 export default {
   crearOrden,
   avanzarEstadoOrden,
   registrarResultadosOrden,
   repetirOrden,
+  poblarOrden,
+  listar,
+  listarMias,
+  obtenerPorId,
 };

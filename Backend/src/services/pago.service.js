@@ -12,15 +12,18 @@
  * ejecutan dentro de una transaccion.
  */
 import ApiError from '../utils/ApiError.js';
+import { paginacion } from '../utils/paginacion.js';
 import {
   ESTADO_CUPON,
   ESTADO_SOLICITUD,
   ESTADO_SOPORTE_PAGO,
+  ESTADO_SOPORTE_PAGO_LISTA,
   FORMATOS_SOPORTE,
 } from '../config/constants.js';
 import CuponPago from '../models/servicios/CuponPago.js';
 import SoportePago from '../models/servicios/SoportePago.js';
 import Cotizacion from '../models/servicios/Cotizacion.js';
+import Solicitud from '../models/servicios/Solicitud.js';
 import { conTransaccion, transicionarSolicitud } from './flujo.service.js';
 
 function normalizarFormato(formato) {
@@ -291,13 +294,116 @@ async function reenviarSoportePago({
   });
 }
 
+const POPULATE_SOPORTE = [
+  { path: 'cupon', select: 'codigo_cupon valor estado cotizacion' },
+  { path: 'validador', select: 'nombres apellidos correo' },
+];
+
+/** Popula el soporte con sus referencias. */
+function poblarSoporte(doc) {
+  return doc.populate(POPULATE_SOPORTE);
+}
+
+/** GET /pagos — lista paginada (coordinador). */
+async function listar(query = {}) {
+  const { page, limit, skip } = paginacion(query);
+  const filtro = {};
+  if (query.estado) {
+    if (!ESTADO_SOPORTE_PAGO_LISTA.includes(query.estado)) {
+      throw ApiError.badRequest('estado invalido');
+    }
+    filtro.estado = query.estado;
+  }
+  if (query.cupon) filtro.cupon = query.cupon;
+
+  const [items, total] = await Promise.all([
+    SoportePago.find(filtro)
+      .populate(POPULATE_SOPORTE)
+      .sort({ fecha_carga: -1 })
+      .skip(skip)
+      .limit(limit),
+    SoportePago.countDocuments(filtro),
+  ]);
+
+  return { items, total, page, pages: Math.ceil(total / limit) || 1 };
+}
+
+/** GET /pagos/mios — soportes del cliente autenticado. */
+async function listarMios(clienteId, query = {}) {
+  const { page, limit, skip } = paginacion(query);
+
+  const solicitudes = await Solicitud.find({ cliente: clienteId }).select('_id').lean();
+  const cotizaciones = await Cotizacion.find({
+    solicitud: { $in: solicitudes.map((solicitud) => solicitud._id) },
+  })
+    .select('_id')
+    .lean();
+  const cupones = await CuponPago.find({
+    cotizacion: { $in: cotizaciones.map((cotizacion) => cotizacion._id) },
+  })
+    .select('_id')
+    .lean();
+
+  const filtro = { cupon: { $in: cupones.map((cupon) => cupon._id) } };
+  if (query.estado) {
+    if (!ESTADO_SOPORTE_PAGO_LISTA.includes(query.estado)) {
+      throw ApiError.badRequest('estado invalido');
+    }
+    filtro.estado = query.estado;
+  }
+
+  const [items, total] = await Promise.all([
+    SoportePago.find(filtro)
+      .populate(POPULATE_SOPORTE)
+      .sort({ fecha_carga: -1 })
+      .skip(skip)
+      .limit(limit),
+    SoportePago.countDocuments(filtro),
+  ]);
+
+  return { items, total, page, pages: Math.ceil(total / limit) || 1 };
+}
+
+/** GET /pagos/:id */
+async function obtenerPorId(id) {
+  const doc = await SoportePago.findById(id).populate(POPULATE_SOPORTE);
+  if (!doc) throw ApiError.notFound('Soporte no encontrado');
+  return doc;
+}
+
+/** GET /pagos/:id (solo documento, para autorizar antes de reenviar). */
+async function obtenerSoporte(id) {
+  const doc = await SoportePago.findById(id);
+  if (!doc) throw ApiError.notFound('Soporte no encontrado');
+  return doc;
+}
+
+/** Cupon que se va a pagar (para validar pertenencia antes de cargar el soporte). */
+async function obtenerCuponParaCarga(cuponId) {
+  const cupon = await CuponPago.findById(cuponId);
+  if (!cupon) throw ApiError.badRequest('El cupon indicado no existe');
+  return cupon;
+}
+
 export {
   cargarSoportePago,
   validarSoportePago,
   reenviarSoportePago,
+  poblarSoporte,
+  listar,
+  listarMios,
+  obtenerPorId,
+  obtenerSoporte,
+  obtenerCuponParaCarga,
 };
 export default {
   cargarSoportePago,
   validarSoportePago,
   reenviarSoportePago,
+  poblarSoporte,
+  listar,
+  listarMios,
+  obtenerPorId,
+  obtenerSoporte,
+  obtenerCuponParaCarga,
 };

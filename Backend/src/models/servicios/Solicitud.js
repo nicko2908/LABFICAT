@@ -14,6 +14,7 @@
  */
 import mongoose from 'mongoose';
 import { ESTADO_SOLICITUD, ESTADO_SOLICITUD_LISTA } from '../../config/constants.js';
+import { generarCodigoSolicitud } from '../../services/codigo.service.js';
 
 const REGEX_CODIGO = /^SOL-\d{4}-\d{4}$/;
 
@@ -53,23 +54,13 @@ const solicitudSchema = new mongoose.Schema(
 );
 
 /**
- * Genera el consecutivo anual SOL-AAAA-NNNN antes de validar, si no viene asignado.
- * (Equivale al trigger trg_muestra_codigo_automatico del modelo SQL.)
+ * Genera el consecutivo anual SOL-AAAA-NNNN antes de validar, si no viene
+ * asignado. Usa un contador atomico (no findOne + 1) para soportar
+ * concurrencia.
  */
 solicitudSchema.pre('validate', async function () {
   if (this.codigo_solicitud) return;
-
-  const anio = new Date().getFullYear();
-  const prefijo = `SOL-${anio}-`;
-
-  const ultima = await this.constructor
-    .findOne({ codigo_solicitud: new RegExp(`^${prefijo}`) })
-    .sort({ codigo_solicitud: -1 })
-    .select('codigo_solicitud')
-    .lean();
-
-  const consecutivo = ultima ? parseInt(ultima.codigo_solicitud.slice(-4), 10) + 1 : 1;
-  this.codigo_solicitud = `${prefijo}${String(consecutivo).padStart(4, '0')}`;
+  this.codigo_solicitud = await generarCodigoSolicitud({ session: this.$session() });
 });
 
 export default mongoose.model('Solicitud', solicitudSchema);

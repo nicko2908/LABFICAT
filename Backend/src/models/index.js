@@ -39,6 +39,7 @@ import Reclamacion from './calidad/Reclamacion.js';
 
 // Sistema
 import ConfiguracionSistema from './sistema/ConfiguracionSistema.js';
+import Contador from './sistema/Contador.js';
 
 export {
   Rol,
@@ -66,4 +67,5 @@ export {
   Encuesta,
   Reclamacion,
   ConfiguracionSistema,
+  Contador,
 };

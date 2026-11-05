@@ -10,6 +10,7 @@
  */
 import mongoose from 'mongoose';
 import { ESTADO_RECLAMACION, ESTADO_RECLAMACION_LISTA, FORMATOS_EVIDENCIA } from '../../config/constants.js';
+import { generarCodigoReclamacion } from '../../services/codigo.service.js';
 
 const REGEX_CODIGO = /^REC-\d{4}-\d{4}$/;
 
@@ -50,22 +51,12 @@ const reclamacionSchema = new mongoose.Schema(
 );
 
 /**
- * Genera el codigo REC-AAAA-NNNN (consecutivo anual) si no viene asignado.
+ * Genera el codigo REC-AAAA-NNNN (consecutivo anual atomico) si no viene
+ * asignado.
  */
 reclamacionSchema.pre('validate', async function () {
   if (this.codigo_soporte) return;
-
-  const anio = new Date().getFullYear();
-  const prefijo = `REC-${anio}-`;
-
-  const ultima = await this.constructor
-    .findOne({ codigo_soporte: new RegExp(`^${prefijo}`) })
-    .sort({ codigo_soporte: -1 })
-    .select('codigo_soporte')
-    .lean();
-
-  const consecutivo = ultima ? parseInt(ultima.codigo_soporte.slice(-4), 10) + 1 : 1;
-  this.codigo_soporte = `${prefijo}${String(consecutivo).padStart(4, '0')}`;
+  this.codigo_soporte = await generarCodigoReclamacion({ session: this.$session() });
 });
 
 export default mongoose.model('Reclamacion', reclamacionSchema);

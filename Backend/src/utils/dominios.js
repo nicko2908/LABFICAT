@@ -1,9 +1,9 @@
 ﻿/**
- * Util: determinacion del tipo de cliente (INTERNO / EXTERNO).
+ * Util: determinacion del tipo de cliente por dominio de correo.
  *
- * RF-02: el sistema asigna el tipo de usuario segun el dominio del correo.
- * Se comparte porque tambien lo usan RF-04 (tarifa 0 para internos)
- * y RF-20 (filtro de reportes por tipo de usuario).
+ * @deprecated El tipo de cliente ya NO se deriva del correo. Ahora se calcula
+ * con tipologia.es_interno (ver utils/tipologias.js -> tipoClienteDeTipologia).
+ * Se conserva solo como referencia historica; no usar en flujos nuevos.
  */
 
 const DOMINIOS_INTERNOS = ['sena.edu.co', 'misena.edu.co'];

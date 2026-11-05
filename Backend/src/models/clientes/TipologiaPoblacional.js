@@ -9,8 +9,11 @@
  *  - Nunca se eliminan registros: se desactivan con "activo" (RF-21).
  *  - Unicidad INSENSIBLE a mayusculas/minusculas (collation es, strength 2),
  *    para evitar "Indigena" y "indigena" como dos registros distintos.
- *  - codigo: identificador estable para reglas de negocio (por ejemplo,
- *    NINGUNA). No se usa el nombre visible porque el coordinador puede editarlo.
+ *  - codigo: identificador estable para reglas de negocio. No se usa el
+ *    nombre visible porque el coordinador puede editarlo.
+ *  - es_interno: define el tipo de cliente. Las tipologias marcadas como
+ *    internas (Aprendices SENA, CampeSENA, Comunidad SENA y Cooperativas de
+ *    Aprendices) liquidan al 0 %; el resto son clientes externos.
  */
 import mongoose from 'mongoose';
 
@@ -34,6 +37,7 @@ const tipologiaSchema = new mongoose.Schema(
       maxlength: 30,
     },
     descripcion: { type: String, trim: true, maxlength: 200, default: null },
+    es_interno: { type: Boolean, default: false },
     activo: { type: Boolean, default: true },
   },
   { timestamps: true, collation: COLACION_ES }
