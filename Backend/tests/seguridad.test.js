@@ -50,3 +50,22 @@ test('CORS no permite un origen ajeno', async () => {
   assert.equal(res.status, 200);
   assert.equal(res.headers.get('access-control-allow-origin'), null);
 });
+
+test('OpenAPI expone el contrato de la API', async () => {
+  const res = await fetch(`${base}/api/docs.json`);
+
+  assert.equal(res.status, 200);
+  const spec = await res.json();
+  assert.equal(spec.openapi, '3.0.3');
+  assert.ok(spec.paths['/api/v1/auth/login']);
+  assert.ok(spec.paths['/api/v1/informes/{id}/pdf']);
+  assert.ok(spec.paths['/api/v1/reclamaciones/{id}/evidencias']);
+});
+
+test('Swagger UI responde la pagina de documentacion', async () => {
+  const res = await fetch(`${base}/api/docs/`);
+
+  assert.equal(res.status, 200);
+  const html = await res.text();
+  assert.match(html, /swagger-ui/i);
+});

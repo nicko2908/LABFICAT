@@ -58,7 +58,7 @@ npm start
   controladores solo traducen HTTP -> service -> respuesta. Se eliminaron los
   servicios stub y se centralizaron paginacion, traduccion de errores de
   Mongoose y lectura del actor autenticado.
-  **119 pruebas automatizadas.**
+  **144 pruebas automatizadas a la fecha.**
 - **Plantillas (Fase 3 parcial):** cotizacion versionada con items, catalogo de
   35 ensayos, 16 tipologias comerciales, codigos atomicos, generadores Excel
   de Oferta de servicios y Acta de recepcion, y generadores PDF de informe y
@@ -86,6 +86,9 @@ npm test
 
 # 4. Smoke test de Cloudflare R2 (usa credenciales reales)
 npm run test:r2
+
+# 5. Documentacion interactiva
+# http://localhost:3000/api/docs
 ```
 
 Las pruebas cargan `tests/setup.js`, que usa `.env` si existe y, si no,
@@ -116,6 +119,9 @@ permite transacciones sobre replica sets.
 ```bash
 # Crea/actualiza roles, configuracion, catalogos y usuario de prueba
 npm run seed
+
+# Usuarios QA (cliente interno, cliente externo y analista) + flujo demo
+npm run seed:qa
 
 # Migraciones sobre bases existentes (idempotentes)
 npm run migrar:catalogos   # 16 tipologias, tipos de muestra, parametro Resultado y 35 ensayos
