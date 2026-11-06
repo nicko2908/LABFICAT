@@ -4,13 +4,17 @@
  */
 import { Router } from 'express';
 import autenticar from '../middlewares/auth.middleware.js';
+import {
+  loginLimiter,
+  registroLimiter,
+} from '../middlewares/security.middleware.js';
 import ctrl from '../controllers/auth.controller.js';
 
 const router = Router();
 
 // Publicas (RF-01 / RF-02 / RF-27)
-router.post('/registro', ctrl.registrar);
-router.post('/login', ctrl.login);
+router.post('/registro', registroLimiter, ctrl.registrar);
+router.post('/login', loginLimiter, ctrl.login);
 
 // Requieren sesion
 router.get('/perfil', autenticar, ctrl.obtenerPerfil);

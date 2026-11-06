@@ -4,6 +4,7 @@
  */
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import morgan from 'morgan';
 
 import env from './config/env.js';
@@ -16,8 +17,33 @@ import errorHandler from './middlewares/error.middleware.js';
 
 const app = express();
 
+const origenesPermitidos = String(env.corsOrigin || '*')
+  .split(',')
+  .map((origen) => origen.trim())
+  .filter(Boolean);
+
 // Middlewares globales
-app.use(cors({ origin: env.corsOrigin, credentials: true }));
+app.use(
+  helmet({
+    // La API y los PDFs se consumen desde el frontend en otro origen.
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (
+        !origin ||
+        origenesPermitidos.includes('*') ||
+        origenesPermitidos.includes(origin)
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
+    credentials: true,
+  })
+);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 // Un body JSON "null" deja req.body en null; normalizarlo evita TypeError en

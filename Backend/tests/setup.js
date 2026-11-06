@@ -42,3 +42,9 @@ process.env.R2_BUCKET = 'labficat-test';
 process.env.R2_ENDPOINT = 'https://test-account.r2.cloudflarestorage.com';
 process.env.R2_REGION = 'auto';
 process.env.R2_PRESIGN_EXPIRES = '300';
+
+// CORS fijo para pruebas y correo deshabilitado (nunca se envia SMTP real).
+process.env.CORS_ORIGIN = 'http://localhost:5173';
+process.env.MAIL_HOST = '';
+process.env.MAIL_USER = '';
+process.env.MAIL_PASS = '';

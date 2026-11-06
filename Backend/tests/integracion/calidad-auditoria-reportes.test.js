@@ -5,6 +5,7 @@
  */
 import test, { before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import mongoose from 'mongoose';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { mockClient } from 'aws-sdk-client-mock';
@@ -171,23 +172,32 @@ test('auditoria: registra, lista y aisla por rol', async () => {
   assert.equal(prohibido.status, 403);
 });
 
-test('recuperacion de contrasena: token de un solo uso', async () => {
+test('recuperacion de contrasena: respuesta generica y token de un solo uso', async () => {
   const solicitar = await pedir('/auditoria/recuperacion/solicitar', {
     method: 'POST',
     body: { correo: 'clientecalidad@test.local' },
   });
-  assert.equal(solicitar.status, 200);
-  assert.ok(solicitar.json.datos.token);
+  assert.equal(solicitar.status, 202);
+  assert.equal(solicitar.json.datos, null);
+  assert.equal(solicitar.json.datos?.token, undefined);
+
+  const plano = 'token-recuperacion-test';
+  await TokenRecuperacion.create({
+    usuario: usuarioCliente._id,
+    token_hash: crypto.createHash('sha256').update(plano).digest('hex'),
+    fecha_expiracion: new Date(Date.now() + 30 * 60 * 1000),
+    usado: false,
+  });
 
   const consumir = await pedir('/auditoria/recuperacion/consumir', {
     method: 'POST',
-    body: { token: solicitar.json.datos.token, nueva: 'ClaveNueva123*' },
+    body: { token: plano, nueva: 'ClaveNueva123*' },
   });
   assert.equal(consumir.status, 200);
 
   const repetido = await pedir('/auditoria/recuperacion/consumir', {
     method: 'POST',
-    body: { token: solicitar.json.datos.token, nueva: 'OtraClave123*' },
+    body: { token: plano, nueva: 'OtraClave123*' },
   });
   assert.equal(repetido.status, 400);
 
@@ -201,7 +211,7 @@ test('recuperacion de contrasena: token de un solo uso', async () => {
     method: 'POST',
     body: { correo: 'nadie@test.local' },
   });
-  assert.equal(desconocido.status, 200);
+  assert.equal(desconocido.status, 202);
   assert.equal(desconocido.json.datos, null);
 });
 
