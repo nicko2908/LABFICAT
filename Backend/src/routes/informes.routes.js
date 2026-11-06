@@ -16,6 +16,7 @@ router.use(autenticar);
 
 router.get('/mios', permitir('cliente'), ctrl.listarMios);
 router.get('/', permitir('coordinador'), ctrl.listar);
+router.get('/:id/pdf', permitir('cliente', 'coordinador'), ctrl.descargarPdf);
 router.get('/:id', permitir('cliente', 'coordinador'), ctrl.obtenerPorId);
 router.post('/', permitir('coordinador'), ctrl.generar);
 router.patch('/:id/envio', permitir('coordinador'), ctrl.registrarEnvio);

@@ -60,14 +60,15 @@ npm start
   Mongoose y lectura del actor autenticado.
   **119 pruebas automatizadas.**
 - **Plantillas (Fase 3 parcial):** cotizacion versionada con items, catalogo de
-  35 ensayos, 16 tipologias comerciales, codigos atomicos y generadores Excel
-  de Oferta de servicios y Acta de recepcion.
+  35 ensayos, 16 tipologias comerciales, codigos atomicos, generadores Excel
+  de Oferta de servicios y Acta de recepcion, y generadores PDF de informe y
+  rotulo con QR.
 - **Regla de negocio:** las 4 tipologias internas son **Aprendices SENA,
   CampeSENA, Comunidad SENA y Cooperativas de Aprendices**; liquidan al 0 %.
   Las otras 12 son externas y pagan la tarifa del catalogo. El tipo de cliente
   se deriva de la tipologia, **no del dominio del correo**.
-- **Pendiente Fase 3/4:** uploads reales, PDF/QR, notificaciones, auditoria
-  automatica, jobs, helmet/rate limit, OpenAPI, CI y frontend.
+- **Pendiente Fase 3/4:** notificaciones, auditoria automatica, jobs,
+  helmet/rate limit, OpenAPI, CI y frontend.
 
 ## Verificacion rapida
 
@@ -137,6 +138,15 @@ se regeneran con `npm run plantillas:preparar`.
 La plantilla de cotizacion imprime un solo bloque de item (hasta 3 ensayos),
 igual que el formato oficial. Si la cotizacion tiene varios items, el endpoint
 devuelve el primero y agrega el header `X-Advertencia`.
+
+### Generadores PDF
+
+- `GET /api/v1/informes/:id/pdf` - Informe de resultados. El cliente debe tener
+  la encuesta respondida.
+- `GET /api/v1/muestras/:id/rotulo` - Rotulo de muestra con QR.
+
+Los PDF se generan en memoria, se guardan en Cloudflare R2 y se descargan por
+endpoints autenticados.
 
 ## Estructura
 

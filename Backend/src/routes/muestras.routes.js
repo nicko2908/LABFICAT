@@ -17,6 +17,7 @@ router.use(autenticar);
 router.get('/mias', permitir('cliente'), ctrl.listarMias);
 router.get('/', permitir('coordinador', 'analista'), ctrl.listar);
 router.get('/:id/acta-recepcion', permitir('cliente', 'coordinador', 'analista'), ctrl.exportarActa);
+router.get('/:id/rotulo', permitir('cliente', 'coordinador', 'analista'), ctrl.descargarRotulo);
 router.get('/:id', permitir('cliente', 'coordinador', 'analista'), ctrl.obtenerPorId);
 router.post('/', permitir('coordinador'), ctrl.crear);
 router.put('/:id', permitir('coordinador'), ctrl.actualizar);

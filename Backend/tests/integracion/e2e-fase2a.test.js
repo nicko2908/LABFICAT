@@ -36,6 +36,9 @@ import SoportePago from '../../src/models/servicios/SoportePago.js';
 import Informe from '../../src/models/calidad/Informe.js';
 import Encuesta from '../../src/models/calidad/Encuesta.js';
 import HistorialEstadoSolicitud from '../../src/models/servicios/HistorialEstadoSolicitud.js';
+import { instalarS3Mock } from '../helpers/s3.js';
+
+instalarS3Mock();
 
 let replSet;
 let server;

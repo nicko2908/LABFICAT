@@ -43,6 +43,7 @@ import {
   generarCotizacionXlsx,
   generarActaRecepcionXlsx,
 } from '../../src/services/excel.service.js';
+import { generarRotulo, obtenerPdfRotulo } from '../../src/services/rotulo.service.js';
 import Rol from '../../src/models/seguridad/Rol.js';
 import Usuario from '../../src/models/seguridad/Usuario.js';
 import TipologiaPoblacional from '../../src/models/clientes/TipologiaPoblacional.js';
@@ -59,6 +60,10 @@ import CuponPago from '../../src/models/servicios/CuponPago.js';
 import HistorialEstadoSolicitud from '../../src/models/servicios/HistorialEstadoSolicitud.js';
 import HistorialPrioridad from '../../src/models/laboratorio/HistorialPrioridad.js';
 import Contador from '../../src/models/sistema/Contador.js';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
+import { instalarS3Mock, s3Mock } from '../helpers/s3.js';
+
+instalarS3Mock();
 
 let replSet;
 let server;
@@ -436,6 +441,22 @@ test('flujo multi-item y multi-muestra llega a Finalizada', async () => {
     await avanzarEstadoOrden({ ordenId: orden._id, estadoNuevo: 'FINALIZADA' });
   }
 
+  const rotulo = await generarRotulo(muestra1._id, {});
+  assert.match(rotulo.archivo_pdf.key, /^rotulos\//);
+
+  s3Mock.on(GetObjectCommand).resolves({
+    Body: {
+      transformToByteArray: async () => Buffer.from('%PDF-1.4\nrotulo de prueba'),
+    },
+  });
+  const { buffer: rotuloPdf } = await obtenerPdfRotulo(muestra1._id, {
+    id: String(usuario._id),
+    sub: String(usuario._id),
+    rol: 'cliente',
+  });
+  assert.equal(rotuloPdf.subarray(0, 4).toString(), '%PDF');
+  instalarS3Mock();
+
   const informe1 = await generarInforme({
     muestraId: muestra1._id,
     usuarioId: usuario._id,
@@ -663,7 +684,7 @@ test('genera la cotizacion y el acta de recepcion en Excel', async () => {
   assert.match(String(cotWs.getCell('B18').value), /Humedad°/);
   assert.equal(cotWs.getCell('H18').value, 15000);
   assert.equal(cotWs.getCell('I21').result, 15000);
-  assert.equal(cotWs.getImages().length, 1, 'solo debe quedar el logo');
+  assert.equal(cotWs.getImages().length, 2, 'deben quedar el logo y la firma');
 
   // Se crea la muestra directamente para probar el acta sin montar el pago
   // externo completo; el generador solo depende de la muestra y su cotizacion.

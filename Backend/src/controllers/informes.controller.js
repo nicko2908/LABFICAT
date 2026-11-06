@@ -11,6 +11,7 @@ import {
   generarInforme,
   registrarEnvioInforme,
   registrarDescargaInforme,
+  obtenerPdfInforme,
   poblarInforme,
   listar as listarInformes,
   listarMios as listarInformesMios,
@@ -56,17 +57,37 @@ async function obtenerPorId(req, res, next) {
   }
 }
 
-/** POST /informes — RF-15. */
+/** POST /informes — RF-15. Genera el PDF y lo sube a R2. */
 async function generar(req, res, next) {
   try {
-    const { muestra, ruta_pdf } = req.body || {};
+    const { muestra } = req.body || {};
     const doc = await generarInforme({
       muestraId: muestra,
-      rutaPdf: ruta_pdf,
       usuarioId: actorId(req),
     });
     await poblarInforme(doc);
     res.status(201).json(new ApiResponse(doc, 'Informe generado'));
+  } catch (err) {
+    next(traducirErrorMongoose(err, { entidad: 'informe' }));
+  }
+}
+
+/** GET /informes/:id/pdf — RF-17. */
+async function descargarPdf(req, res, next) {
+  try {
+    const informe = await obtenerInforme(req.params.id);
+    if (!esCoordinador(req.usuario)) {
+      await verificarPropietarioInforme(informe, req.usuario);
+    }
+
+    const { buffer, nombre } = await obtenerPdfInforme({
+      informeId: req.params.id,
+      usuario: req.usuario,
+    });
+
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="${nombre}"`);
+    res.send(buffer);
   } catch (err) {
     next(traducirErrorMongoose(err, { entidad: 'informe' }));
   }
@@ -100,12 +121,21 @@ async function registrarDescarga(req, res, next) {
   }
 }
 
-export { listar, listarMios, obtenerPorId, generar, registrarEnvio, registrarDescarga };
+export {
+  listar,
+  listarMios,
+  obtenerPorId,
+  generar,
+  descargarPdf,
+  registrarEnvio,
+  registrarDescarga,
+};
 export default {
   listar,
   listarMios,
   obtenerPorId,
   generar,
+  descargarPdf,
   registrarEnvio,
   registrarDescarga,
 };
