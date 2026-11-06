@@ -119,6 +119,7 @@ npm run seed
 # Migraciones sobre bases existentes (idempotentes)
 npm run migrar:catalogos   # 16 tipologias, tipos de muestra, parametro Resultado y 35 ensayos
 npm run migrar:plan        # version/items/codigos/snapshot, muestras, clientes e indices
+npm run migrar:peticiones  # pagos sin archivo y revision de evidencias legadas
 npm run migrar:tipologia   # legado: solo si aun no existe el catalogo nuevo
 ```
 

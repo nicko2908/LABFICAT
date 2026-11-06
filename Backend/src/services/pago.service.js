@@ -18,7 +18,6 @@ import {
   ESTADO_SOLICITUD,
   ESTADO_SOPORTE_PAGO,
   ESTADO_SOPORTE_PAGO_LISTA,
-  FORMATOS_SOPORTE,
 } from '../config/constants.js';
 import CuponPago from '../models/servicios/CuponPago.js';
 import SoportePago from '../models/servicios/SoportePago.js';
@@ -26,19 +25,21 @@ import Cotizacion from '../models/servicios/Cotizacion.js';
 import Solicitud from '../models/servicios/Solicitud.js';
 import { conTransaccion, transicionarSolicitud } from './flujo.service.js';
 
-function normalizarFormato(formato) {
-  const valor = String(formato || '').trim().toUpperCase();
-  if (!FORMATOS_SOPORTE.includes(valor)) {
-    throw ApiError.badRequest(
-      `formato debe ser uno de: ${FORMATOS_SOPORTE.join(', ')}`
-    );
+function normalizarReferencia(referenciaExterna) {
+  const valor = String(referenciaExterna || '').trim();
+  if (!valor) return null;
+  if (valor.length > 100) {
+    throw ApiError.badRequest('referencia_externa no puede superar 100 caracteres');
   }
   return valor;
 }
 
-function normalizarRuta(rutaArchivo) {
-  const valor = String(rutaArchivo || '').trim();
-  if (!valor) throw ApiError.badRequest('ruta_archivo es obligatoria');
+function normalizarObservaciones(observaciones) {
+  const valor = String(observaciones || '').trim();
+  if (!valor) return null;
+  if (valor.length > 200) {
+    throw ApiError.badRequest('observaciones no puede superar 200 caracteres');
+  }
   return valor;
 }
 
@@ -57,27 +58,27 @@ async function obtenerCotizacionDeCupon(cupon, session) {
 }
 
 /**
- * Carga el soporte de pago de un cupon y pasa la solicitud a
- * Pago pendiente de verificacion.
+ * Registra el pago reportado por el cliente para un cupon y pasa la solicitud
+ * a Pago pendiente de verificacion. No se almacena ningun comprobante.
  *
  * @param {{
  *   cuponId: string|import('mongoose').Types.ObjectId,
- *   rutaArchivo: string,
- *   formato: string,
+ *   referenciaExterna?: string|null,
+ *   observaciones?: string|null,
  *   usuarioId: string|import('mongoose').Types.ObjectId,
  * }} params
  * @returns {Promise<import('mongoose').Document>}
  */
 async function cargarSoportePago({
   cuponId,
-  rutaArchivo,
-  formato,
+  referenciaExterna = null,
+  observaciones = null,
   usuarioId,
 }) {
   if (!usuarioId) throw ApiError.unauthorized();
 
-  const ruta = normalizarRuta(rutaArchivo);
-  const formatoNormalizado = normalizarFormato(formato);
+  const referencia = normalizarReferencia(referenciaExterna);
+  const observacion = normalizarObservaciones(observaciones);
 
   return conTransaccion(async (session) => {
     const cupon = await CuponPago.findById(cuponId).session(session);
@@ -103,8 +104,8 @@ async function cargarSoportePago({
       [
         {
           cupon: cupon._id,
-          ruta_archivo: ruta,
-          formato: formatoNormalizado,
+          referencia_externa: referencia,
+          observaciones: observacion,
         },
       ],
       { session }
@@ -116,7 +117,7 @@ async function cargarSoportePago({
       {
         session,
         usuario: usuarioId,
-        observacion: 'Soporte de pago cargado',
+        observacion: 'Pago reportado por el cliente',
       }
     );
 
@@ -221,27 +222,27 @@ async function validarSoportePago({
 }
 
 /**
- * Reenvia un soporte rechazado y devuelve la solicitud a
- * Pago pendiente de verificacion.
+ * Reenvia la referencia de un pago rechazado y devuelve la solicitud a
+ * Pago pendiente de verificacion. No se almacena ningun comprobante.
  *
  * @param {{
  *   soporteId: string|import('mongoose').Types.ObjectId,
- *   rutaArchivo: string,
- *   formato: string,
+ *   referenciaExterna?: string|null,
+ *   observaciones?: string|null,
  *   usuarioId: string|import('mongoose').Types.ObjectId,
  * }} params
  * @returns {Promise<import('mongoose').Document>}
  */
 async function reenviarSoportePago({
   soporteId,
-  rutaArchivo,
-  formato,
+  referenciaExterna = null,
+  observaciones = null,
   usuarioId,
 }) {
   if (!usuarioId) throw ApiError.unauthorized();
 
-  const ruta = normalizarRuta(rutaArchivo);
-  const formatoNormalizado = normalizarFormato(formato);
+  const referencia = normalizarReferencia(referenciaExterna);
+  const observacion = normalizarObservaciones(observaciones);
 
   return conTransaccion(async (session) => {
     const soporte = await SoportePago.findById(soporteId).session(session);
@@ -265,12 +266,11 @@ async function reenviarSoportePago({
       { _id: soporteId, estado: ESTADO_SOPORTE_PAGO.RECHAZADO },
       {
         $set: {
-          ruta_archivo: ruta,
-          formato: formatoNormalizado,
+          referencia_externa: referencia,
           estado: ESTADO_SOPORTE_PAGO.PENDIENTE_VERIFICACION,
           validador: null,
           fecha_validacion: null,
-          observaciones: null,
+          observaciones: observacion,
         },
       },
       { new: true, runValidators: true, session }
@@ -286,7 +286,7 @@ async function reenviarSoportePago({
       {
         session,
         usuario: usuarioId,
-        observacion: 'Soporte de pago reenviado',
+        observacion: 'Pago reenviado por el cliente',
       }
     );
 

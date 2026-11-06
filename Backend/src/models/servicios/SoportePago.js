@@ -1,13 +1,14 @@
 ﻿/**
  * Modelo Mongoose: SoportePago (dominio: servicios).
  *
- * Comprobante de pago que el cliente externo carga para un cupon (RF-07) y que
+ * Registro del pago que el cliente externo reporta para un cupon (RF-07) y que
  * el coordinador valida (RF-08).
  *
  * Decisiones:
+ *  - El comprobante NO se almacena en el sistema: Produccion de Centro lo
+ *    gestiona por un proceso externo. Solo se guarda una referencia opcional.
  *  - Relacion 1:1 con el cupon (un solo soporte por cupon). Si se rechaza y el
  *    cliente reenvia, se ACTUALIZA el mismo documento.
- *  - ruta_archivo apunta a storage/soportes-pago (solo se guarda la ruta).
  *  - validador: usuario coordinador que aprueba/rechaza; null mientras no se valide.
  *  - fecha_carga = timestamps.createdAt.
  */
@@ -15,7 +16,6 @@ import mongoose from 'mongoose';
 import {
   ESTADO_SOPORTE_PAGO,
   ESTADO_SOPORTE_PAGO_LISTA,
-  FORMATOS_SOPORTE,
 } from '../../config/constants.js';
 
 const soportePagoSchema = new mongoose.Schema(
@@ -33,8 +33,9 @@ const soportePagoSchema = new mongoose.Schema(
       default: null,
     },
 
-    ruta_archivo: { type: String, required: true, trim: true, maxlength: 255 },
-    formato: { type: String, required: true, enum: FORMATOS_SOPORTE },
+    // Referencia externa del pago (opcional). El comprobante vive en
+    // Produccion de Centro, no en LABFICAT.
+    referencia_externa: { type: String, trim: true, maxlength: 100, default: null },
 
     estado: {
       type: String,

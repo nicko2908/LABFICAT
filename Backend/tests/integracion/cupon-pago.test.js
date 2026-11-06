@@ -125,8 +125,8 @@ async function crearSoporteCargado(escenario) {
   const { coordinador, cupon } = await crearCuponGenerado(escenario);
   const soporte = await cargarSoportePago({
     cuponId: cupon._id,
-    rutaArchivo: 'pagos/soporte.pdf',
-    formato: 'pdf',
+    referenciaExterna: 'OP-123',
+    observaciones: 'Pago de prueba',
     usuarioId: escenario.usuario._id,
   });
   return { coordinador, cupon, soporte };
@@ -302,13 +302,38 @@ test('cargarSoportePago transiciona la solicitud a pago pendiente', async () => 
   const { cupon, soporte } = await crearSoporteCargado(escenario);
 
   assert.equal(soporte.estado, 'PENDIENTE_VERIFICACION');
-  assert.equal(soporte.formato, 'PDF');
+  assert.equal(soporte.referencia_externa, 'OP-123');
 
   const solicitud = await Solicitud.findById(escenario.solicitud._id);
   assert.equal(solicitud.estado, ESTADO_SOLICITUD.PAGO_PENDIENTE_VERIFICACION);
 
   const cuponRecargado = await CuponPago.findById(cupon._id);
   assert.equal(cuponRecargado.estado, 'GENERADO');
+});
+
+test('cargarSoportePago valida la longitud de referencia y observaciones', async () => {
+  const escenario = await crearCotizacionAceptada();
+  const { cupon } = await crearCuponGenerado(escenario);
+
+  await assert.rejects(
+    () =>
+      cargarSoportePago({
+        cuponId: cupon._id,
+        referenciaExterna: 'X'.repeat(101),
+        usuarioId: escenario.usuario._id,
+      }),
+    (error) => error.status === 400
+  );
+
+  await assert.rejects(
+    () =>
+      cargarSoportePago({
+        cuponId: cupon._id,
+        observaciones: 'X'.repeat(201),
+        usuarioId: escenario.usuario._id,
+      }),
+    (error) => error.status === 400
+  );
 });
 
 test('validarSoportePago aprobado marca cupon UTILIZADO y solicitud Pago aprobado', async () => {
@@ -349,8 +374,8 @@ test('validarSoportePago rechazado deja cupon GENERADO y permite reenviar', asyn
 
   const reenviado = await reenviarSoportePago({
     soporteId: soporte._id,
-    rutaArchivo: 'pagos/soporte-2.pdf',
-    formato: 'PDF',
+    referenciaExterna: 'OP-124',
+    observaciones: 'Referencia corregida',
     usuarioId: escenario.usuario._id,
   });
 
@@ -392,8 +417,7 @@ test('cargarSoportePago rechaza un segundo soporte para el mismo cupon', async (
     () =>
       cargarSoportePago({
         cuponId: cupon._id,
-        rutaArchivo: 'pagos/otro.pdf',
-        formato: 'PDF',
+        referenciaExterna: 'OP-125',
         usuarioId: escenario.usuario._id,
       }),
     (err) => err.status === 409
@@ -502,8 +526,8 @@ test('flujo HTTP: crear cupon, cargar soporte y aprobar pago', async () => {
     token: tokenCliente,
     body: {
       cupon: String(generado._id),
-      ruta_archivo: 'pagos/http.pdf',
-      formato: 'pdf',
+      referencia_externa: 'OP-HTTP',
+      observaciones: 'Pago reportado por HTTP',
     },
   });
   assert.equal(soporteRes.status, 201);
@@ -534,8 +558,7 @@ test('un cliente no puede cargar soporte de un cupon ajeno', async () => {
     token: tokenOtro,
     body: {
       cupon: String(cupon._id),
-      ruta_archivo: 'pagos/ajeno.pdf',
-      formato: 'PDF',
+      referencia_externa: 'OP-AJENO',
     },
   });
 
@@ -559,8 +582,7 @@ test('un cliente no puede reenviar un soporte ajeno', async () => {
     method: 'PUT',
     token: tokenOtro,
     body: {
-      ruta_archivo: 'pagos/ajeno.pdf',
-      formato: 'PDF',
+      referencia_externa: 'OP-AJENO',
     },
   });
 

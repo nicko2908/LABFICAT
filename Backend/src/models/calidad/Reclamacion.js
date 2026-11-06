@@ -5,21 +5,23 @@
  *
  * Decisiones:
  *  - codigo_soporte: REC-AAAA-NNNN, autogenerado (consecutivo anual).
- *  - evidencias: subdocumentos (ex-tabla evidencia_reclamacion), solo imagenes.
+ *  - evidencias: subdocumentos con metadatos de R2. Cada evidencia tiene _id
+ *    para poder descargarla sin depender de su posicion en el arreglo.
  *  - fecha_registro = timestamps.createdAt.
  */
 import mongoose from 'mongoose';
-import { ESTADO_RECLAMACION, ESTADO_RECLAMACION_LISTA, FORMATOS_EVIDENCIA } from '../../config/constants.js';
+import { ESTADO_RECLAMACION, ESTADO_RECLAMACION_LISTA } from '../../config/constants.js';
 import { generarCodigoReclamacion } from '../../services/codigo.service.js';
+import { archivoSchema } from '../comunes/archivo.js';
 
 const REGEX_CODIGO = /^REC-\d{4}-\d{4}$/;
 
 const evidenciaSchema = new mongoose.Schema(
   {
-    ruta_archivo: { type: String, required: true, trim: true, maxlength: 255 },
-    formato: { type: String, required: true, enum: FORMATOS_EVIDENCIA },
+    archivo: { type: archivoSchema, required: true },
+    fecha_carga: { type: Date, default: Date.now },
   },
-  { _id: false }
+  { _id: true }
 );
 
 const reclamacionSchema = new mongoose.Schema(

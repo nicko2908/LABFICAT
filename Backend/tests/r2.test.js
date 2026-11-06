@@ -129,6 +129,15 @@ test('subirFirma valida PNG, calcula hash y usa la carpeta firmas', async () => 
   assert.deepEqual(input.Metadata, { sha256: resultado.hash });
 });
 
+test('subirFirma rechaza firmas mayores a 2 MB', async () => {
+  const grande = Buffer.alloc(2 * 1024 * 1024 + 1);
+
+  await assert.rejects(
+    () => subirFirma({ base64: grande.toString('base64'), nombre: 'grande.png' }),
+    (error) => error.status === 400 && /2 MB/.test(error.message)
+  );
+});
+
 test('subirFirma rechaza contenido vacio o que no sea PNG', async () => {
   await assert.rejects(
     () => subirFirma({ base64: '', nombre: 'vacia.png' }),

@@ -11,6 +11,7 @@
     "migrar:tipologia": "node scripts/migraciones/001-tipologia-ninguna.js",
     "migrar:catalogos": "node scripts/migraciones/002-catalogos.js",
     "migrar:plan": "node scripts/migraciones/003-plan-plantillas.js",
+    "migrar:peticiones": "node scripts/migraciones/004-peticiones-archivos.js",
     "plantillas:preparar": "node scripts/prepararPlantillas.mjs",
     "test:r2": "node scripts/test-r2.js",
     "test": "node --test --import ./tests/setup.js \"tests/**/*.test.js\""

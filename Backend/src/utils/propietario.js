@@ -195,6 +195,29 @@ async function verificarPropietarioInforme(informe, usuario, { session } = {}) {
 }
 
 /**
+ * Verifica el acceso a una reclamacion a traves de su solicitud.
+ * @param {import('mongoose').Document|object} reclamacion
+ * @param {{ id?: string, sub?: string, rol?: string }} usuario
+ * @param {{ session?: import('mongoose').ClientSession }} [opciones]
+ * @returns {Promise<{ esCoordinador: boolean, cliente: import('mongoose').Document|null }>}
+ */
+async function verificarPropietarioReclamacion(reclamacion, usuario, { session } = {}) {
+  if (!usuario) throw ApiError.unauthorized();
+  if (esCoordinador(usuario)) {
+    return { esCoordinador: true, cliente: null };
+  }
+
+  const solicitudId = idDe(reclamacion.solicitud);
+  let query = Solicitud.findById(solicitudId);
+  if (session) query = query.session(session);
+  const solicitud = await query;
+
+  if (!solicitud) throw ApiError.notFound('Solicitud no encontrada');
+
+  return verificarPropietarioSolicitud(solicitud, usuario, { session });
+}
+
+/**
  * Verifica el acceso a una encuesta a traves de su solicitud.
  * @param {import('mongoose').Document|object} encuesta
  * @param {{ id?: string, sub?: string, rol?: string }} usuario
@@ -276,6 +299,7 @@ export {
   verificarPropietarioOrden,
   verificarPropietarioInforme,
   verificarPropietarioEncuesta,
+  verificarPropietarioReclamacion,
 };
 
 export default {
@@ -291,4 +315,5 @@ export default {
   verificarPropietarioOrden,
   verificarPropietarioInforme,
   verificarPropietarioEncuesta,
+  verificarPropietarioReclamacion,
 };

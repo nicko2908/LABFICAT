@@ -20,6 +20,7 @@ import { getR2 } from '../config/r2.js';
 import ApiError from '../utils/ApiError.js';
 
 const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+const MAX_FIRMA_BYTES = 2 * 1024 * 1024;
 
 function esPng(buffer) {
   return buffer.length >= PNG_MAGIC.length && buffer.subarray(0, PNG_MAGIC.length).equals(PNG_MAGIC);
@@ -159,6 +160,9 @@ export async function subirFirma({ base64, nombre }) {
 
   if (buffer.length === 0) {
     throw ApiError.badRequest('La firma esta vacia o no es un PNG valido');
+  }
+  if (buffer.length > MAX_FIRMA_BYTES) {
+    throw ApiError.badRequest('La firma supera el tamano permitido (2 MB)');
   }
   if (!esPng(buffer)) {
     throw ApiError.badRequest('La firma no es un PNG valido');

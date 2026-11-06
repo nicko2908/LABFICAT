@@ -260,8 +260,8 @@ test('flujo E2E completo de la Fase 2A', async () => {
     token: tokenCliente,
     body: {
       cupon: String(cuponId),
-      ruta_archivo: 'pagos/e2e.pdf',
-      formato: 'PDF',
+      referencia_externa: 'OP-E2E',
+      observaciones: 'Pago reportado en el flujo E2E',
     },
   });
   assert.equal(pagoRes.status, 201);

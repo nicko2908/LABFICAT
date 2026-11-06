@@ -275,12 +275,22 @@ test('decidirCotizacion acepta y sincroniza la solicitud', async () => {
   const actualizada = await decidirCotizacion({
     cotizacionId: cotizacion._id,
     decision: 'ACEPTADA',
-    firma: { ruta: 'firmas/test.png', hash: 'hash-test' },
+    firma: {
+      ruta: 'firmas/test.png',
+      key: 'firmas/test.png',
+      hash: 'hash-test',
+      proveedor: 'r2',
+      bucket: 'labficat-test',
+      content_type: 'image/png',
+      bytes: 123,
+    },
     usuarioId: usuario._id,
   });
 
   assert.equal(actualizada.estado, 'ACEPTADA');
   assert.equal(actualizada.firma_ruta, 'firmas/test.png');
+  assert.equal(actualizada.firma.key, 'firmas/test.png');
+  assert.equal(actualizada.firma.bucket, 'labficat-test');
 
   const recargada = await Solicitud.findById(solicitud._id);
   assert.equal(recargada.estado, ESTADO_SOLICITUD.ACEPTADA);
