@@ -4,7 +4,7 @@
  *
  * - El coordinador crea y gestiona las cotizaciones.
  * - El cliente consulta las suyas y firma (acepta/rechaza) en PATCH /:id/decision.
- *   La firma digital (PNG) se guarda de forma PRIVADA en Supabase; el cliente
+ *   La firma digital (PNG) se guarda de forma PRIVADA en Cloudflare R2; el cliente
  *   no accede a ella. Solo el coordinador la descarga (GET /:id/firma).
  */
 import { Router } from 'express';

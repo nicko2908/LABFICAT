@@ -7,7 +7,7 @@
  * descarga -> envio.
  *
  * La aceptacion de la cotizacion se hace por servicio con una firma simulada
- * para no subir archivos reales a Supabase durante las pruebas.
+ * para no subir archivos reales a R2 durante las pruebas.
  */
 import test, { before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -230,7 +230,7 @@ test('flujo E2E completo de la Fase 2A', async () => {
   assert.equal(cotizacionRes.status, 201);
   const cotizacionId = cotizacionRes.body.datos._id;
 
-  // 5. Aceptacion con firma simulada (servicio, sin Supabase)
+  // 5. Aceptacion con firma simulada (servicio, sin storage real)
   await decidirCotizacion({
     cotizacionId,
     decision: 'ACEPTADA',

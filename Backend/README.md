@@ -33,9 +33,11 @@ npm start
 ## Variables de entorno
 
 - **Obligatorias:** `MONGO_URI` y `JWT_SECRET`. Si faltan, el backend no arranca.
-- **Supabase (opcional en local):** `SUPABASE_URL` y `API_KEY_SUPABASE`.
-  Si no estan configuradas, la API funciona igual y solo los endpoints de
-  firma digital responden `503 Storage no configurado`.
+- **Cloudflare R2 (opcional en local):** `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`,
+  `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_ENDPOINT`, `R2_REGION` y
+  `R2_PRESIGN_EXPIRES`. Si no estan configuradas, la API funciona igual y solo
+  los endpoints que usan storage responden `503 R2 no configurado`.
+  Para probar la conexion real: `npm run test:r2`.
 - **Negocio:** `CUPON_VIGENCIA_DIAS` (por defecto 5), `CUPON_UMBRAL_RECORDATORIO_DIAS`,
   `TOKEN_RECUPERACION_MINUTOS` y `RESPONSABLE_LABORATORIO` (nombre que firma la
   Oferta de servicios en Excel).
@@ -80,6 +82,9 @@ curl -X POST http://localhost:3000/api/v1/auth/login \
 
 # 3. Pruebas automatizadas
 npm test
+
+# 4. Smoke test de Cloudflare R2 (usa credenciales reales)
+npm run test:r2
 ```
 
 Las pruebas cargan `tests/setup.js`, que usa `.env` si existe y, si no,
@@ -161,4 +166,4 @@ logs/               Salida de auditoria/errores
 - Un archivo por **coleccion** en `models/`, agrupados por dominio.
 - Un archivo por **modulo** en `controllers/`, `services/` y `routes/`.
 - Las rutas solo orquestan; la logica vive en `services/`.
-- Los archivos binarios se guardan en `storage/`; en BD solo la ruta.
+- Los archivos se guardan en Cloudflare R2; en BD solo la clave y sus metadatos.
