@@ -133,7 +133,7 @@ async function decidir(req, res, next) {
       if (!firma_base64) {
         throw ApiError.badRequest('firma_base64 es obligatoria para aceptar (firma digital RF-05)');
       }
-      // La subida a Supabase es externa a la transaccion. Si la transaccion
+      // La subida a R2 es externa a la transaccion. Si la transaccion
       // falla despues, el objeto queda huerfano y puede limpiarse con un job.
       firma = await subirFirma({
         base64: firma_base64,

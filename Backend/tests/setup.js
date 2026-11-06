@@ -33,7 +33,18 @@ process.env.CUPON_VIGENCIA_DIAS ??= '5';
 process.env.CUPON_UMBRAL_RECORDATORIO_DIAS ??= '5';
 process.env.TOKEN_RECUPERACION_MINUTOS ??= '30';
 
-// En pruebas no se debe llamar a Supabase real (firmas). El storage debe
-// comportarse como no configurado (503) y los generadores omiten la firma.
-process.env.SUPABASE_URL = '';
-process.env.API_KEY_SUPABASE = '';
+// En pruebas no se debe llamar a R2 real. Los valores permiten construir el
+// cliente S3 y firmar URLs, pero el SDK se mockea en los tests.
+process.env.R2_ACCOUNT_ID = 'test-account';
+process.env.R2_ACCESS_KEY_ID = 'test-key';
+process.env.R2_SECRET_ACCESS_KEY = 'test-secret';
+process.env.R2_BUCKET = 'labficat-test';
+process.env.R2_ENDPOINT = 'https://test-account.r2.cloudflarestorage.com';
+process.env.R2_REGION = 'auto';
+process.env.R2_PRESIGN_EXPIRES = '300';
+
+// CORS fijo para pruebas y correo deshabilitado (nunca se envia SMTP real).
+process.env.CORS_ORIGIN = 'http://localhost:5173';
+process.env.MAIL_HOST = '';
+process.env.MAIL_USER = '';
+process.env.MAIL_PASS = '';

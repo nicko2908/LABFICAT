@@ -8,16 +8,19 @@
 import { Router } from 'express';
 import autenticar from '../middlewares/auth.middleware.js';
 import { permitir } from '../middlewares/role.middleware.js';
+import { subirEvidencias } from '../middlewares/upload.middleware.js';
 import ctrl from '../controllers/reclamaciones.controller.js';
 
 const router = Router();
 
 router.use(autenticar);
 
+router.get('/mias', permitir('cliente'), ctrl.listarMias);
 router.get('/', permitir('coordinador'), ctrl.listar);
-router.get('/:id', permitir('coordinador'), ctrl.obtenerPorId);
+router.get('/:id/evidencias/:evidenciaId', permitir('cliente', 'coordinador'), ctrl.descargarEvidencia);
+router.get('/:id', permitir('cliente', 'coordinador'), ctrl.obtenerPorId);
 router.post('/', permitir('cliente'), ctrl.crear);
-router.post('/:id/evidencias', permitir('cliente'), ctrl.agregarEvidencia);
+router.post('/:id/evidencias', permitir('cliente'), subirEvidencias, ctrl.agregarEvidencia);
 router.patch('/:id/estado', permitir('coordinador'), ctrl.cambiarEstado);
 
 export default router;

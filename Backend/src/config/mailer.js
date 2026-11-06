@@ -5,6 +5,7 @@
  */
 import nodemailer from 'nodemailer';
 import env from './env.js';
+import ApiError from '../utils/ApiError.js';
 
 const transporter = nodemailer.createTransport({
   host: env.mail.host,
@@ -24,6 +25,13 @@ const transporter = nodemailer.createTransport({
  * @param {Array}  [opciones.adjuntos]     [{ filename, path|content }]
  */
 async function enviarCorreo({ para, asunto, html, texto, adjuntos = [] }) {
+  if (!env.mail.configurado) {
+    throw new ApiError(
+      503,
+      'Correo no configurado: defina MAIL_HOST, MAIL_USER y MAIL_PASS en .env'
+    );
+  }
+
   return transporter.sendMail({
     from: env.mail.from,
     to: para,

@@ -4,8 +4,8 @@
  *
  * Reglas:
  *  - MONGO_URI y JWT_SECRET son obligatorias: sin ellas el backend no arranca.
- *  - Supabase es opcional: si falta configuracion, el storage responde 503
- *    solo cuando se usa (ver config/supabase.js), sin tumbar el resto de la API.
+ *  - R2 es opcional: si falta configuracion, el storage responde 503
+ *    solo cuando se usa (ver config/r2.js), sin tumbar el resto de la API.
  */
 import 'dotenv/config';
 
@@ -31,6 +31,11 @@ function numero(nombre, porDefecto) {
 
 const nodeEnv = texto('NODE_ENV') || 'development';
 const jwtSecret = obligatoria('JWT_SECRET');
+
+const r2AccountId = texto('R2_ACCOUNT_ID') || null;
+const r2Endpoint =
+  texto('R2_ENDPOINT') ||
+  (r2AccountId ? `https://${r2AccountId}.r2.cloudflarestorage.com` : null);
 
 if (nodeEnv === 'production') {
   if (jwtSecret === PLACEHOLDER_JWT || jwtSecret.length < 32) {
@@ -65,9 +70,14 @@ const env = {
     toProduccion: texto('MAIL_TO_PRODUCCION') || null,
   },
 
-  supabase: {
-    url: texto('SUPABASE_URL') || null,
-    key: texto('API_KEY_SUPABASE') || null,
+  r2: {
+    accountId: r2AccountId,
+    accessKeyId: texto('R2_ACCESS_KEY_ID') || null,
+    secretAccessKey: texto('R2_SECRET_ACCESS_KEY') || null,
+    bucket: texto('R2_BUCKET') || null,
+    endpoint: r2Endpoint,
+    region: texto('R2_REGION') || 'auto',
+    presignExpires: numero('R2_PRESIGN_EXPIRES', 300),
   },
 
   negocio: {
@@ -78,7 +88,12 @@ const env = {
 };
 
 // Banderas utiles para health checks o diagnosticos, sin exponer credenciales.
-env.supabase.configurado = Boolean(env.supabase.url && env.supabase.key);
+env.r2.configurado = Boolean(
+  env.r2.accessKeyId &&
+  env.r2.secretAccessKey &&
+  env.r2.bucket &&
+  env.r2.endpoint
+);
 
 const mailPassPlaceholder =
   !env.mail.pass || env.mail.pass === '********' || env.mail.pass === 'cambiar';

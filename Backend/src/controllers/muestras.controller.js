@@ -17,7 +17,10 @@ import {
   actualizar as actualizarMuestra,
   cambiarPrioridad as cambiarPrioridadService,
 } from '../services/muestra.service.js';
-import { generarRotulo as generarRotuloService } from '../services/rotulo.service.js';
+import {
+  generarRotulo as generarRotuloService,
+  obtenerPdfRotulo as obtenerPdfRotuloService,
+} from '../services/rotulo.service.js';
 import { generarActaRecepcionXlsx } from '../services/excel.service.js';
 import {
   esPersonalLaboratorio,
@@ -155,6 +158,22 @@ async function generarRotulo(req, res, next) {
   }
 }
 
+/** GET /muestras/:id/rotulo */
+async function descargarRotulo(req, res, next) {
+  try {
+    const { buffer, nombre } = await obtenerPdfRotuloService(
+      req.params.id,
+      req.usuario
+    );
+
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="${nombre}"`);
+    res.send(buffer);
+  } catch (err) {
+    next(traducirErrorMongoose(err, { entidad: 'rotulo' }));
+  }
+}
+
 /** GET /muestras/:id/acta-recepcion */
 async function exportarActa(req, res, next) {
   try {
@@ -183,6 +202,7 @@ export {
   actualizar,
   cambiarPrioridad,
   generarRotulo,
+  descargarRotulo,
   exportarActa,
 };
 export default {
@@ -193,5 +213,6 @@ export default {
   actualizar,
   cambiarPrioridad,
   generarRotulo,
+  descargarRotulo,
   exportarActa,
 };

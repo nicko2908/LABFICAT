@@ -8,11 +8,14 @@
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "seed": "node src/seeds/index.js",
+    "seed:qa": "node src/seeds/qa.js",
     "migrar:tipologia": "node scripts/migraciones/001-tipologia-ninguna.js",
     "migrar:catalogos": "node scripts/migraciones/002-catalogos.js",
     "migrar:plan": "node scripts/migraciones/003-plan-plantillas.js",
+    "migrar:peticiones": "node scripts/migraciones/004-peticiones-archivos.js",
     "plantillas:preparar": "node scripts/prepararPlantillas.mjs",
-    "test": "node --test --import ./tests/setup.js"
+    "test:r2": "node scripts/test-r2.js",
+    "test": "node --test --import ./tests/setup.js \"tests/**/*.test.js\""
   },
   "keywords": [
     "labficat",
@@ -24,19 +27,28 @@
   "author": "Equipo LABFICAT",
   "license": "UNLICENSED",
   "dependencies": {
-    "@supabase/supabase-js": "^2.117.3",
+    "@aws-sdk/client-s3": "^3.1163.0",
+    "@aws-sdk/s3-request-presigner": "^3.1163.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "exceljs": "^4.4.0",
     "express": "^4.19.2",
+    "express-rate-limit": "^8.7.3",
+    "file-type": "^22.3.0",
+    "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.5.0",
     "morgan": "^1.10.0",
+    "multer": "^2.5.0",
     "node-cron": "^4.6.0",
-    "nodemailer": "^10.0.16"
+    "nodemailer": "^10.0.16",
+    "pdfkit": "^0.20.2",
+    "qrcode": "^1.5.4",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
+    "aws-sdk-client-mock": "^4.1.0",
     "jszip": "^3.10.2",
     "mongodb-memory-server": "^11.3.0"
   }

@@ -7,7 +7,7 @@
  * descarga -> envio.
  *
  * La aceptacion de la cotizacion se hace por servicio con una firma simulada
- * para no subir archivos reales a Supabase durante las pruebas.
+ * para no subir archivos reales a R2 durante las pruebas.
  */
 import test, { before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -36,6 +36,9 @@ import SoportePago from '../../src/models/servicios/SoportePago.js';
 import Informe from '../../src/models/calidad/Informe.js';
 import Encuesta from '../../src/models/calidad/Encuesta.js';
 import HistorialEstadoSolicitud from '../../src/models/servicios/HistorialEstadoSolicitud.js';
+import { instalarS3Mock } from '../helpers/s3.js';
+
+instalarS3Mock();
 
 let replSet;
 let server;
@@ -230,7 +233,7 @@ test('flujo E2E completo de la Fase 2A', async () => {
   assert.equal(cotizacionRes.status, 201);
   const cotizacionId = cotizacionRes.body.datos._id;
 
-  // 5. Aceptacion con firma simulada (servicio, sin Supabase)
+  // 5. Aceptacion con firma simulada (servicio, sin storage real)
   await decidirCotizacion({
     cotizacionId,
     decision: 'ACEPTADA',
@@ -260,8 +263,8 @@ test('flujo E2E completo de la Fase 2A', async () => {
     token: tokenCliente,
     body: {
       cupon: String(cuponId),
-      ruta_archivo: 'pagos/e2e.pdf',
-      formato: 'PDF',
+      referencia_externa: 'OP-E2E',
+      observaciones: 'Pago reportado en el flujo E2E',
     },
   });
   assert.equal(pagoRes.status, 201);

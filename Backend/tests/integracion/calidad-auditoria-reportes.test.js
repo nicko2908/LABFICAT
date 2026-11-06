@@ -5,8 +5,15 @@
  */
 import test, { before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import mongoose from 'mongoose';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
+import { mockClient } from 'aws-sdk-client-mock';
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+} from '@aws-sdk/client-s3';
 
 import app from '../../src/app.js';
 import { firmar } from '../../src/utils/jwt.js';
@@ -21,6 +28,13 @@ import Encuesta from '../../src/models/calidad/Encuesta.js';
 import Reclamacion from '../../src/models/calidad/Reclamacion.js';
 import Contador from '../../src/models/sistema/Contador.js';
 
+const PNG_1X1 = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=',
+  'base64'
+);
+
+const s3Mock = mockClient(S3Client);
+
 let replSet;
 let server;
 let base;
@@ -32,6 +46,11 @@ let cliente;
 let solicitud;
 
 before(async () => {
+  s3Mock.on(PutObjectCommand).resolves({ ETag: '"etag"' });
+  s3Mock.on(GetObjectCommand).resolves({
+    Body: { transformToByteArray: async () => PNG_1X1 },
+  });
+
   replSet = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
   await mongoose.connect(replSet.getUri('labficat_test_calidad'));
 
@@ -118,6 +137,19 @@ async function pedir(ruta, { method = 'GET', token, body } = {}) {
   return { status: res.status, json };
 }
 
+async function pedirForm(ruta, { method = 'POST', token, form } = {}) {
+  const headers = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetch(`${base}${ruta}`, {
+    method,
+    headers,
+    body: form,
+  });
+  const json = await res.json().catch(() => null);
+  return { status: res.status, json, headers: res.headers };
+}
+
 test('auditoria: registra, lista y aisla por rol', async () => {
   const registrada = await pedir('/auditoria', {
     method: 'POST',
@@ -140,23 +172,32 @@ test('auditoria: registra, lista y aisla por rol', async () => {
   assert.equal(prohibido.status, 403);
 });
 
-test('recuperacion de contrasena: token de un solo uso', async () => {
+test('recuperacion de contrasena: respuesta generica y token de un solo uso', async () => {
   const solicitar = await pedir('/auditoria/recuperacion/solicitar', {
     method: 'POST',
     body: { correo: 'clientecalidad@test.local' },
   });
-  assert.equal(solicitar.status, 200);
-  assert.ok(solicitar.json.datos.token);
+  assert.equal(solicitar.status, 202);
+  assert.equal(solicitar.json.datos, null);
+  assert.equal(solicitar.json.datos?.token, undefined);
+
+  const plano = 'token-recuperacion-test';
+  await TokenRecuperacion.create({
+    usuario: usuarioCliente._id,
+    token_hash: crypto.createHash('sha256').update(plano).digest('hex'),
+    fecha_expiracion: new Date(Date.now() + 30 * 60 * 1000),
+    usado: false,
+  });
 
   const consumir = await pedir('/auditoria/recuperacion/consumir', {
     method: 'POST',
-    body: { token: solicitar.json.datos.token, nueva: 'ClaveNueva123*' },
+    body: { token: plano, nueva: 'ClaveNueva123*' },
   });
   assert.equal(consumir.status, 200);
 
   const repetido = await pedir('/auditoria/recuperacion/consumir', {
     method: 'POST',
-    body: { token: solicitar.json.datos.token, nueva: 'OtraClave123*' },
+    body: { token: plano, nueva: 'OtraClave123*' },
   });
   assert.equal(repetido.status, 400);
 
@@ -170,7 +211,7 @@ test('recuperacion de contrasena: token de un solo uso', async () => {
     method: 'POST',
     body: { correo: 'nadie@test.local' },
   });
-  assert.equal(desconocido.status, 200);
+  assert.equal(desconocido.status, 202);
   assert.equal(desconocido.json.datos, null);
 });
 
@@ -214,13 +255,38 @@ test('reclamaciones: crea, agrega evidencia y resuelve', async () => {
   assert.equal(creada.status, 201);
   assert.match(creada.json.datos.codigo_soporte, /^REC-\d{4}-\d{4}$/);
 
-  const evidencia = await pedir(`/reclamaciones/${creada.json.datos._id}/evidencias`, {
-    method: 'POST',
+  const detalle = await pedir(`/reclamaciones/${creada.json.datos._id}`, {
     token: tokenCliente(),
-    body: { ruta_archivo: 'storage/reclamaciones/foto.png', formato: 'PNG' },
   });
+  assert.equal(detalle.status, 200);
+
+  const misReclamaciones = await pedir('/reclamaciones/mias', {
+    token: tokenCliente(),
+  });
+  assert.equal(misReclamaciones.status, 200);
+  assert.equal(misReclamaciones.json.datos.total, 1);
+
+  const form = new FormData();
+  form.append('evidencias', new Blob([PNG_1X1], { type: 'image/png' }), 'foto.png');
+
+  const evidencia = await pedirForm(
+    `/reclamaciones/${creada.json.datos._id}/evidencias`,
+    { token: tokenCliente(), form }
+  );
   assert.equal(evidencia.status, 200);
   assert.equal(evidencia.json.datos.evidencias.length, 1);
+
+  const archivo = evidencia.json.datos.evidencias[0].archivo;
+  assert.equal(archivo.content_type, 'image/png');
+  assert.match(archivo.key, /^evidencias\//);
+
+  const descarga = await fetch(
+    `${base}/reclamaciones/${creada.json.datos._id}/evidencias/${evidencia.json.datos.evidencias[0]._id}`,
+    { headers: { Authorization: `Bearer ${tokenCoordinador()}` } }
+  );
+  assert.equal(descarga.status, 200);
+  assert.equal(descarga.headers.get('content-type'), 'image/png');
+  assert.deepEqual(Buffer.from(await descarga.arrayBuffer()), PNG_1X1);
 
   const invalida = await pedir(`/reclamaciones/${creada.json.datos._id}/estado`, {
     method: 'PATCH',
@@ -240,4 +306,54 @@ test('reclamaciones: crea, agrega evidencia y resuelve', async () => {
   const listado = await pedir('/reclamaciones', { token: tokenCoordinador() });
   assert.equal(listado.status, 200);
   assert.equal(listado.json.datos.total, 1);
+});
+
+test('reclamaciones: rechaza evidencia con contenido que no es imagen', async () => {
+  const creada = await pedir('/reclamaciones', {
+    method: 'POST',
+    token: tokenCliente(),
+    body: { solicitud: String(solicitud._id), motivo: 'Evidencia falsa' },
+  });
+  assert.equal(creada.status, 201);
+
+  const form = new FormData();
+  form.append(
+    'evidencias',
+    new Blob([Buffer.from('no soy una imagen')], { type: 'image/png' }),
+    'falsa.png'
+  );
+
+  const res = await pedirForm(
+    `/reclamaciones/${creada.json.datos._id}/evidencias`,
+    { token: tokenCliente(), form }
+  );
+
+  assert.equal(res.status, 400);
+  assert.match(res.json.mensaje, /formato permitido/i);
+});
+
+test('reclamaciones: rechaza mas de cinco evidencias', async () => {
+  const creada = await pedir('/reclamaciones', {
+    method: 'POST',
+    token: tokenCliente(),
+    body: { solicitud: String(solicitud._id), motivo: 'Demasiadas evidencias' },
+  });
+  assert.equal(creada.status, 201);
+
+  const form = new FormData();
+  for (let indice = 0; indice < 6; indice += 1) {
+    form.append(
+      'evidencias',
+      new Blob([PNG_1X1], { type: 'image/png' }),
+      `foto-${indice}.png`
+    );
+  }
+
+  const res = await pedirForm(
+    `/reclamaciones/${creada.json.datos._id}/evidencias`,
+    { token: tokenCliente(), form }
+  );
+
+  assert.equal(res.status, 400);
+  assert.match(res.json.mensaje, /demasiados archivos/i);
 });

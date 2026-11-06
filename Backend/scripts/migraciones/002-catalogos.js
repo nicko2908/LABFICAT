@@ -109,6 +109,13 @@ async function migrarParametros() {
 }
 
 async function migrarAnalisis() {
+  // La base legada tiene el indice unico nombre_1 y el catalogo nuevo repite
+  // nombres (Azucares totales, Fenoles totales). Hay que eliminarlo ANTES del
+  // bulkWrite; si se deja para el final, la insercion falla con E11000.
+  if (!dryRun) {
+    await Analisis.syncIndexes();
+  }
+
   const resultado = dryRun
     ? await Parametro.findOne({ nombre: PARAMETRO_RESULTADO.nombre }).lean()
     : await Parametro.findOne({ nombre: PARAMETRO_RESULTADO.nombre });

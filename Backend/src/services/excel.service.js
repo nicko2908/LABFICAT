@@ -214,7 +214,7 @@ async function generarCotizacionXlsx(cotizacionId) {
   ws.getCell('C37').value = null;
   ws.getCell('C38').value = formatearNit(snapshot.nit);
 
-  // Firma del cliente aceptada (Supabase). Si no esta configurado o no hay
+  // Firma del cliente aceptada (R2). Si no esta configurado o no hay
   // firma, el area queda en blanco para firma manuscrita.
   if (
     cotizacion.estado === ESTADO_COTIZACION.ACEPTADA &&

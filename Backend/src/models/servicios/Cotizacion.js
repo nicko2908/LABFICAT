@@ -21,6 +21,7 @@
 import mongoose from 'mongoose';
 import { ESTADO_COTIZACION, ESTADO_COTIZACION_LISTA } from '../../config/constants.js';
 import { generarCodigoCotizacion } from '../../services/codigo.service.js';
+import { archivoSchema } from '../comunes/archivo.js';
 
 const detalleItemSchema = new mongoose.Schema(
   {
@@ -93,9 +94,12 @@ const cotizacionSchema = new mongoose.Schema(
     fecha_decision: { type: Date, default: null },
     motivo_rechazo: { type: String, trim: true, maxlength: 500, default: null },
 
-    // Firma digital del cliente (RF-05) — bucket privado, respaldo legal.
-    firma_ruta: { type: String, trim: true, default: null },  // objeto en bucket 'firmas'
+    // Firma digital del cliente (RF-05) - bucket privado, respaldo legal.
+    // firma_ruta/firma_hash se conservan como compatibilidad; firma contiene
+    // los metadatos completos de R2 para las firmas nuevas.
+    firma_ruta: { type: String, trim: true, default: null },  // key en R2
     firma_hash: { type: String, trim: true, default: null },  // SHA-256 para integridad
+    firma: { type: archivoSchema, default: null },
     firma_fecha: { type: Date, default: null },
     firma_ip: { type: String, trim: true, maxlength: 45, default: null },
   },

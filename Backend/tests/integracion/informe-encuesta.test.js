@@ -39,6 +39,10 @@ import Cotizacion from '../../src/models/servicios/Cotizacion.js';
 import Informe from '../../src/models/calidad/Informe.js';
 import Encuesta from '../../src/models/calidad/Encuesta.js';
 import HistorialEstadoSolicitud from '../../src/models/servicios/HistorialEstadoSolicitud.js';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
+import { instalarS3Mock, s3Mock } from '../helpers/s3.js';
+
+instalarS3Mock();
 
 let replSet;
 let server;
@@ -467,6 +471,11 @@ test('flujo HTTP: informe, encuesta, descarga y envio', async () => {
 
   const informeId = informeRes.body.datos._id;
 
+  const pdfSinEncuesta = await fetch(`${base}/api/v1/informes/${informeId}/pdf`, {
+    headers: { Authorization: `Bearer ${tokenCliente}` },
+  });
+  assert.equal(pdfSinEncuesta.status, 403);
+
   const encuestaRes = await pedir('/api/v1/encuestas', {
     method: 'POST',
     token: tokenCliente,
@@ -476,6 +485,22 @@ test('flujo HTTP: informe, encuesta, descarga y envio', async () => {
     },
   });
   assert.equal(encuestaRes.status, 201);
+
+  s3Mock.on(GetObjectCommand).resolves({
+    Body: {
+      transformToByteArray: async () => Buffer.from('%PDF-1.4\ninforme de prueba'),
+    },
+  });
+
+  const pdf = await fetch(`${base}/api/v1/informes/${informeId}/pdf`, {
+    headers: { Authorization: `Bearer ${tokenCliente}` },
+  });
+  assert.equal(pdf.status, 200);
+  assert.equal(pdf.headers.get('content-type'), 'application/pdf');
+  const pdfBytes = Buffer.from(await pdf.arrayBuffer());
+  assert.equal(pdfBytes.subarray(0, 4).toString(), '%PDF');
+
+  instalarS3Mock();
 
   const descarga = await pedir(`/api/v1/informes/${informeId}/descarga`, {
     method: 'PATCH',

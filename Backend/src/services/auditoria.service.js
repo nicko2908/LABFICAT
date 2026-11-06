@@ -12,6 +12,7 @@ import ApiError from '../utils/ApiError.js';
 import Auditoria from '../models/seguridad/Auditoria.js';
 import TokenRecuperacion from '../models/seguridad/TokenRecuperacion.js';
 import Usuario from '../models/seguridad/Usuario.js';
+import { enviarCorreoRecuperacion } from './notificacion/recuperacion.notificacion.js';
 
 const POPULATE_AUDITORIA = [{ path: 'usuario', select: 'nombres apellidos correo rol' }];
 
@@ -66,7 +67,7 @@ async function registrar(body = {}, ipPorDefecto = null) {
 
 /**
  * POST /auditoria/recuperacion/solicitar — RF-27.
- * Devuelve null cuando el correo no existe (respuesta generica).
+ * Siempre devuelve null: no revela si el correo existe ni expone el token.
  */
 async function solicitarRecuperacion(correo) {
   if (!correo) throw ApiError.badRequest('correo es obligatorio');
@@ -77,14 +78,22 @@ async function solicitarRecuperacion(correo) {
   const plano = crypto.randomBytes(32).toString('hex');
   const minutos = env.negocio.tokenRecuperacionMinutos || 30;
 
-  await TokenRecuperacion.create({
+  const registro = await TokenRecuperacion.create({
     usuario: usuario._id,
     token_hash: hashToken(plano),
     fecha_expiracion: new Date(Date.now() + minutos * 60 * 1000),
     usado: false,
   });
 
-  return { token: plano, expira_minutos: minutos };
+  try {
+    await enviarCorreoRecuperacion({ usuario, token: plano, minutos });
+  } catch (error) {
+    // Si el correo no se pudo enviar, el token no sirve: se elimina.
+    await TokenRecuperacion.deleteOne({ _id: registro._id }).catch(() => {});
+    console.error('[recuperacion] No se pudo enviar el correo:', error.message);
+  }
+
+  return null;
 }
 
 /** POST /auditoria/recuperacion/consumir — RF-27. */

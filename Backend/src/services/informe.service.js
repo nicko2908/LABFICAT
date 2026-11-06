@@ -25,7 +25,15 @@ import Muestra from '../models/laboratorio/Muestra.js';
 import OrdenAnalisis from '../models/laboratorio/OrdenAnalisis.js';
 import Solicitud from '../models/servicios/Solicitud.js';
 import Cotizacion from '../models/servicios/Cotizacion.js';
+import Cliente from '../models/clientes/Cliente.js';
+import Usuario from '../models/seguridad/Usuario.js';
 import { conTransaccion, transicionarSolicitud } from './flujo.service.js';
+import { generarInformePdf } from '../utils/generadores/pdf.js';
+import {
+  subirArchivo,
+  descargarArchivo,
+  eliminarArchivo,
+} from './storage.service.js';
 
 const POPULATE_INFORME = [
   { path: 'muestra', select: 'codigo_muestra estado_recepcion solicitud' },
@@ -109,96 +117,160 @@ async function todasLasMuestrasTienenInforme({ solicitud, session }) {
   return true;
 }
 
+async function cargarContextoInforme({ muestraId, usuarioId }) {
+  const muestra = await Muestra.findById(muestraId)
+    .populate('tipo_muestra', 'nombre')
+    .populate('solicitud', 'codigo_solicitud cliente estado analisis');
+  if (!muestra) throw ApiError.badRequest('La muestra indicada no existe');
+
+  const solicitud = muestra.solicitud;
+  if (!solicitud) {
+    throw ApiError.badRequest('La solicitud de la muestra no existe');
+  }
+
+  const [cliente, usuario, ordenes] = await Promise.all([
+    Cliente.findById(solicitud.cliente)
+      .populate('usuario', 'nombres apellidos correo')
+      .lean(),
+    Usuario.findById(usuarioId).select('nombres apellidos correo').lean(),
+    OrdenAnalisis.find({ muestra: muestra._id })
+      .populate('analisis', 'nombre codigo metodo tecnica unidades')
+      .populate('resultados.parametro', 'nombre unidad_medida')
+      .lean(),
+  ]);
+
+  return { muestra, solicitud, cliente, usuario, ordenes };
+}
+
+function validarContextoInforme({ muestra, solicitud, ordenes }) {
+  if (muestra.estado_recepcion !== ESTADO_RECEPCION_MUESTRA.ACEPTADA) {
+    throw ApiError.conflict('Solo se genera informe de una muestra ACEPTADA');
+  }
+
+  if (
+    solicitud.estado !== ESTADO_SOLICITUD.EN_ANALISIS &&
+    solicitud.estado !== ESTADO_SOLICITUD.INFORME_LISTO
+  ) {
+    throw ApiError.conflict(
+      'La solicitud debe estar En analisis o Informe listo para generar el informe'
+    );
+  }
+
+  const activas = ordenes.filter(
+    (orden) => orden.estado !== ESTADO_ORDEN.INVALIDADA
+  );
+
+  if (activas.length === 0) {
+    throw ApiError.conflict(
+      'La muestra no tiene ordenes validas para generar el informe'
+    );
+  }
+
+  if (activas.some((orden) => orden.estado !== ESTADO_ORDEN.FINALIZADA)) {
+    throw ApiError.conflict('Todas las ordenes activas deben estar FINALIZADAS');
+  }
+
+  return activas;
+}
+
 /**
- * Genera el informe 1:1 de una muestra.
+ * Genera el informe 1:1 de una muestra, genera el PDF y lo sube a R2.
  */
-async function generarInforme({ muestraId, rutaPdf = null, usuarioId }) {
+async function generarInforme({ muestraId, usuarioId }) {
   if (!muestraId) throw ApiError.badRequest('muestra es obligatoria');
   if (!usuarioId) throw ApiError.unauthorized();
 
-  return conTransaccion(async (session) => {
-    const muestra = await Muestra.findById(muestraId).session(session);
-    if (!muestra) throw ApiError.badRequest('La muestra indicada no existe');
+  const contexto = await cargarContextoInforme({ muestraId, usuarioId });
+  const { muestra, solicitud, cliente, usuario, ordenes } = contexto;
+  const activas = validarContextoInforme({ muestra, solicitud, ordenes });
 
-    if (muestra.estado_recepcion !== ESTADO_RECEPCION_MUESTRA.ACEPTADA) {
-      throw ApiError.conflict('Solo se genera informe de una muestra ACEPTADA');
-    }
+  const previo = await Informe.exists({ muestra: muestra._id });
+  if (previo) throw ApiError.conflict('La muestra ya tiene informe');
 
-    const solicitud = await Solicitud.findById(muestra.solicitud).session(session);
-    if (!solicitud) {
-      throw ApiError.badRequest('La solicitud de la muestra no existe');
-    }
+  const requeridos = await analisisDeMuestra(muestra, solicitud);
+  const idAnalisis = (orden) =>
+    String(orden.analisis?._id || orden.analisis || '');
+  const finalizados = new Set(activas.map((orden) => idAnalisis(orden)));
+  const faltantes = requeridos.filter((id) => !finalizados.has(id));
 
-    if (
-      solicitud.estado !== ESTADO_SOLICITUD.EN_ANALISIS &&
-      solicitud.estado !== ESTADO_SOLICITUD.INFORME_LISTO
-    ) {
-      throw ApiError.conflict(
-        'La solicitud debe estar En analisis o Informe listo para generar el informe'
-      );
-    }
-
-    const previo = await Informe.findOne({ muestra: muestra._id }).session(session);
-    if (previo) throw ApiError.conflict('La muestra ya tiene informe');
-
-    const ordenes = await OrdenAnalisis.find({ muestra: muestra._id })
-      .select('estado analisis')
-      .session(session);
-
-    const activas = ordenes.filter(
-      (orden) => orden.estado !== ESTADO_ORDEN.INVALIDADA
+  if (faltantes.length > 0) {
+    throw ApiError.conflict(
+      'Falta una orden finalizada para uno o mas analisis del item de la muestra'
     );
+  }
 
-    if (activas.length === 0) {
-      throw ApiError.conflict(
-        'La muestra no tiene ordenes validas para generar el informe'
-      );
-    }
-
-    if (activas.some((orden) => orden.estado !== ESTADO_ORDEN.FINALIZADA)) {
-      throw ApiError.conflict(
-        'Todas las ordenes activas deben estar FINALIZADAS'
-      );
-    }
-
-    const requeridos = await analisisDeMuestra(muestra, solicitud);
-    const finalizados = new Set(activas.map((orden) => String(orden.analisis)));
-    const faltantes = requeridos.filter((id) => !finalizados.has(id));
-
-    if (faltantes.length > 0) {
-      throw ApiError.conflict(
-        'Falta una orden finalizada para uno o mas analisis del item de la muestra'
-      );
-    }
-
-    const [informe] = await Informe.create(
-      [
-        {
-          muestra: muestra._id,
-          usuario: usuarioId,
-          ruta_pdf: rutaPdf ? String(rutaPdf).trim() : null,
-        },
-      ],
-      { session }
-    );
-
-    const itemsCompletos = await todosLosItemsTienenMuestra({ solicitud, session });
-    const muestrasCompletas = await todasLasMuestrasTienenInforme({ solicitud, session });
-
-    if (itemsCompletos && muestrasCompletas && solicitud.estado === ESTADO_SOLICITUD.EN_ANALISIS) {
-      await transicionarSolicitud(
-        solicitud._id,
-        ESTADO_SOLICITUD.INFORME_LISTO,
-        {
-          session,
-          usuario: usuarioId,
-          observacion: 'Todos los informes de la solicitud estan generados',
-        }
-      );
-    }
-
-    return informe;
+  const buffer = await generarInformePdf({
+    informe: { fecha_generacion: new Date() },
+    muestra,
+    solicitud,
+    cliente,
+    usuario,
+    ordenes,
   });
+
+  const key = `informes/${muestra._id}-${Date.now()}.pdf`;
+  const archivo = await subirArchivo({
+    buffer,
+    key,
+    contentType: 'application/pdf',
+    metadata: { muestra: muestra.codigo_muestra },
+  });
+
+  try {
+    return await conTransaccion(async (session) => {
+      const previoTx = await Informe.findOne({ muestra: muestra._id }).session(session);
+      if (previoTx) throw ApiError.conflict('La muestra ya tiene informe');
+
+      const solicitudTx = await Solicitud.findById(solicitud._id).session(session);
+      if (!solicitudTx) {
+        throw ApiError.badRequest('La solicitud de la muestra no existe');
+      }
+
+      const [informe] = await Informe.create(
+        [
+          {
+            muestra: muestra._id,
+            usuario: usuarioId,
+            archivo_pdf: {
+              ...archivo,
+              nombre_original: `informe-${muestra.codigo_muestra || muestra._id}.pdf`,
+            },
+          },
+        ],
+        { session }
+      );
+
+      const itemsCompletos = await todosLosItemsTienenMuestra({
+        solicitud: solicitudTx,
+        session,
+      });
+      const muestrasCompletas = await todasLasMuestrasTienenInforme({
+        solicitud: solicitudTx,
+        session,
+      });
+
+      if (
+        itemsCompletos &&
+        muestrasCompletas &&
+        solicitudTx.estado === ESTADO_SOLICITUD.EN_ANALISIS
+      ) {
+        await transicionarSolicitud(
+          solicitudTx._id,
+          ESTADO_SOLICITUD.INFORME_LISTO,
+          {
+            session,
+            usuario: usuarioId,
+            observacion: 'Todos los informes de la solicitud estan generados',
+          }
+        );
+      }
+
+      return informe;
+    });
+  } catch (error) {
+    await eliminarArchivo(key).catch(() => {});
+    throw error;
+  }
 }
 
 /**
@@ -295,6 +367,52 @@ async function registrarDescargaInforme({ informeId }) {
   );
 }
 
+/**
+ * Descarga el PDF del informe. Para clientes exige encuesta respondida.
+ * @param {{ informeId: string, usuario: object }} params
+ * @returns {Promise<{ informe: object, buffer: Buffer, nombre: string }>}
+ */
+async function obtenerPdfInforme({ informeId, usuario }) {
+  if (!informeId) throw ApiError.badRequest('informe es obligatorio');
+
+  const informe = await Informe.findById(informeId).populate(
+    'muestra',
+    'codigo_muestra solicitud'
+  );
+  if (!informe) throw ApiError.notFound('Informe no encontrado');
+
+  const key = informe.archivo_pdf?.key || informe.ruta_pdf;
+  if (!key) throw ApiError.notFound('El informe no tiene PDF generado');
+
+  const solicitudId = informe.muestra?.solicitud;
+  if (!solicitudId) {
+    throw ApiError.badRequest('El informe no tiene solicitud asociada');
+  }
+
+  const esCoordinadorUsuario = usuario?.rol === 'coordinador';
+  if (!esCoordinadorUsuario) {
+    const encuesta = await Encuesta.exists({ solicitud: solicitudId });
+    if (!encuesta) {
+      throw ApiError.forbidden(
+        'Debe responder la encuesta de satisfaccion antes de descargar (RF-17)'
+      );
+    }
+
+  }
+
+  const buffer = await descargarArchivo(key);
+
+  if (!esCoordinadorUsuario) {
+    await Informe.findByIdAndUpdate(informeId, {
+      $set: { fecha_descarga: new Date() },
+    });
+  }
+
+  const nombre = `informe-${informe.muestra?.codigo_muestra || informe._id}.pdf`;
+
+  return { informe, buffer, nombre };
+}
+
 /** Popula el informe con sus referencias. */
 function poblarInforme(doc) {
   return doc.populate(POPULATE_INFORME);
@@ -354,6 +472,7 @@ export {
   generarInforme,
   registrarEnvioInforme,
   registrarDescargaInforme,
+  obtenerPdfInforme,
   poblarInforme,
   listar,
   listarMios,
@@ -363,6 +482,7 @@ export default {
   generarInforme,
   registrarEnvioInforme,
   registrarDescargaInforme,
+  obtenerPdfInforme,
   poblarInforme,
   listar,
   listarMios,

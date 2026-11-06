@@ -6,10 +6,12 @@
  * Decisiones:
  *  - analisis: lista de referencias (reemplaza la tabla rotulo_parametro).
  *    El rotulo se arma con los analisis solicitados de la muestra.
- *  - ruta_pdf apunta a storage/rotulos (solo la ruta).
+ *  - archivo_pdf guarda los metadatos del PDF en R2.
+ *  - ruta_pdf se conserva como legado.
  *  - fecha_generacion = timestamps.createdAt.
  */
 import mongoose from 'mongoose';
+import { archivoSchema } from '../comunes/archivo.js';
 
 const rotuloSchema = new mongoose.Schema(
   {
@@ -21,6 +23,7 @@ const rotuloSchema = new mongoose.Schema(
       index: true,
     },
     ruta_pdf: { type: String, trim: true, maxlength: 255, default: null },
+    archivo_pdf: { type: archivoSchema, default: null },
     analisis: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Analisis' }],
   },
   { timestamps: { createdAt: 'fecha_generacion', updatedAt: true } }

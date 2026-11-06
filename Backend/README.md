@@ -33,9 +33,11 @@ npm start
 ## Variables de entorno
 
 - **Obligatorias:** `MONGO_URI` y `JWT_SECRET`. Si faltan, el backend no arranca.
-- **Supabase (opcional en local):** `SUPABASE_URL` y `API_KEY_SUPABASE`.
-  Si no estan configuradas, la API funciona igual y solo los endpoints de
-  firma digital responden `503 Storage no configurado`.
+- **Cloudflare R2 (opcional en local):** `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`,
+  `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_ENDPOINT`, `R2_REGION` y
+  `R2_PRESIGN_EXPIRES`. Si no estan configuradas, la API funciona igual y solo
+  los endpoints que usan storage responden `503 R2 no configurado`.
+  Para probar la conexion real: `npm run test:r2`.
 - **Negocio:** `CUPON_VIGENCIA_DIAS` (por defecto 5), `CUPON_UMBRAL_RECORDATORIO_DIAS`,
   `TOKEN_RECUPERACION_MINUTOS` y `RESPONSABLE_LABORATORIO` (nombre que firma la
   Oferta de servicios en Excel).
@@ -56,16 +58,17 @@ npm start
   controladores solo traducen HTTP -> service -> respuesta. Se eliminaron los
   servicios stub y se centralizaron paginacion, traduccion de errores de
   Mongoose y lectura del actor autenticado.
-  **119 pruebas automatizadas.**
+  **144 pruebas automatizadas a la fecha.**
 - **Plantillas (Fase 3 parcial):** cotizacion versionada con items, catalogo de
-  35 ensayos, 16 tipologias comerciales, codigos atomicos y generadores Excel
-  de Oferta de servicios y Acta de recepcion.
+  35 ensayos, 16 tipologias comerciales, codigos atomicos, generadores Excel
+  de Oferta de servicios y Acta de recepcion, y generadores PDF de informe y
+  rotulo con QR.
 - **Regla de negocio:** las 4 tipologias internas son **Aprendices SENA,
   CampeSENA, Comunidad SENA y Cooperativas de Aprendices**; liquidan al 0 %.
   Las otras 12 son externas y pagan la tarifa del catalogo. El tipo de cliente
   se deriva de la tipologia, **no del dominio del correo**.
-- **Pendiente Fase 3/4:** uploads reales, PDF/QR, notificaciones, auditoria
-  automatica, jobs, helmet/rate limit, OpenAPI, CI y frontend.
+- **Pendiente Fase 3/4:** notificaciones, auditoria automatica, jobs,
+  helmet/rate limit, OpenAPI, CI y frontend.
 
 ## Verificacion rapida
 
@@ -80,6 +83,12 @@ curl -X POST http://localhost:3000/api/v1/auth/login \
 
 # 3. Pruebas automatizadas
 npm test
+
+# 4. Smoke test de Cloudflare R2 (usa credenciales reales)
+npm run test:r2
+
+# 5. Documentacion interactiva
+# http://localhost:3000/api/docs
 ```
 
 Las pruebas cargan `tests/setup.js`, que usa `.env` si existe y, si no,
@@ -111,9 +120,13 @@ permite transacciones sobre replica sets.
 # Crea/actualiza roles, configuracion, catalogos y usuario de prueba
 npm run seed
 
+# Usuarios QA (cliente interno, cliente externo y analista) + flujo demo
+npm run seed:qa
+
 # Migraciones sobre bases existentes (idempotentes)
 npm run migrar:catalogos   # 16 tipologias, tipos de muestra, parametro Resultado y 35 ensayos
 npm run migrar:plan        # version/items/codigos/snapshot, muestras, clientes e indices
+npm run migrar:peticiones  # pagos sin archivo y revision de evidencias legadas
 npm run migrar:tipologia   # legado: solo si aun no existe el catalogo nuevo
 ```
 
@@ -131,6 +144,15 @@ se regeneran con `npm run plantillas:preparar`.
 La plantilla de cotizacion imprime un solo bloque de item (hasta 3 ensayos),
 igual que el formato oficial. Si la cotizacion tiene varios items, el endpoint
 devuelve el primero y agrega el header `X-Advertencia`.
+
+### Generadores PDF
+
+- `GET /api/v1/informes/:id/pdf` - Informe de resultados. El cliente debe tener
+  la encuesta respondida.
+- `GET /api/v1/muestras/:id/rotulo` - Rotulo de muestra con QR.
+
+Los PDF se generan en memoria, se guardan en Cloudflare R2 y se descargan por
+endpoints autenticados.
 
 ## Estructura
 
@@ -161,4 +183,4 @@ logs/               Salida de auditoria/errores
 - Un archivo por **coleccion** en `models/`, agrupados por dominio.
 - Un archivo por **modulo** en `controllers/`, `services/` y `routes/`.
 - Las rutas solo orquestan; la logica vive en `services/`.
-- Los archivos binarios se guardan en `storage/`; en BD solo la ruta.
+- Los archivos se guardan en Cloudflare R2; en BD solo la clave y sus metadatos.

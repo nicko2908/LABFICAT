@@ -8,13 +8,14 @@
 import { Router } from 'express';
 import autenticar from '../middlewares/auth.middleware.js';
 import { permitir } from '../middlewares/role.middleware.js';
+import { recuperacionLimiter } from '../middlewares/security.middleware.js';
 import ctrl from '../controllers/auditoria.controller.js';
 
 const router = Router();
 
 // Publicas (RF-27): el usuario que olvido la contrasena no puede autenticarse.
-router.post('/recuperacion/solicitar', ctrl.solicitarRecuperacion);
-router.post('/recuperacion/consumir', ctrl.consumirRecuperacion);
+router.post('/recuperacion/solicitar', recuperacionLimiter, ctrl.solicitarRecuperacion);
+router.post('/recuperacion/consumir', recuperacionLimiter, ctrl.consumirRecuperacion);
 
 // Bitacora (RNF-03): solo coordinador.
 router.get('/', autenticar, permitir('coordinador'), ctrl.listar);

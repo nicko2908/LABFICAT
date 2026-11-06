@@ -60,10 +60,14 @@ async function obtenerPorId(req, res, next) {
   }
 }
 
-/** POST /pagos — RF-07. */
+/**
+ * POST /pagos — RF-07 el cliente reporta el pago de un cupon GENERADO.
+ * Body: { cupon, referencia_externa?, observaciones? }.
+ * El comprobante no se almacena: lo gestiona Produccion de Centro por fuera.
+ */
 async function cargar(req, res, next) {
   try {
-    const { cupon, ruta_archivo, formato } = req.body || {};
+    const { cupon, referencia_externa, observaciones } = req.body || {};
     if (!cupon) throw ApiError.badRequest('cupon es obligatorio');
 
     const cuponDoc = await obtenerCuponParaCarga(cupon);
@@ -71,35 +75,35 @@ async function cargar(req, res, next) {
 
     const doc = await cargarSoportePago({
       cuponId: cupon,
-      rutaArchivo: ruta_archivo,
-      formato,
+      referenciaExterna: referencia_externa,
+      observaciones,
       usuarioId: actorId(req),
     });
 
     await poblarSoporte(doc);
-    res.status(201).json(new ApiResponse(doc, 'Soporte cargado'));
+    res.status(201).json(new ApiResponse(doc, 'Pago reportado'));
   } catch (err) {
     next(traducirErrorMongoose(err, { entidad: 'soporte' }));
   }
 }
 
-/** PUT /pagos/:id/reenviar */
+/** PUT /pagos/:id/reenviar — actualiza la referencia de un pago rechazado. */
 async function reenviar(req, res, next) {
   try {
-    const { ruta_archivo, formato } = req.body || {};
+    const { referencia_externa, observaciones } = req.body || {};
 
     const soporte = await obtenerSoporte(req.params.id);
     await verificarPropietarioSoportePago(soporte, req.usuario);
 
     const doc = await reenviarSoportePago({
       soporteId: req.params.id,
-      rutaArchivo: ruta_archivo,
-      formato,
+      referenciaExterna: referencia_externa,
+      observaciones,
       usuarioId: actorId(req),
     });
 
     await poblarSoporte(doc);
-    res.json(new ApiResponse(doc, 'Soporte reenviado'));
+    res.json(new ApiResponse(doc, 'Pago reenviado'));
   } catch (err) {
     next(traducirErrorMongoose(err, { entidad: 'soporte' }));
   }

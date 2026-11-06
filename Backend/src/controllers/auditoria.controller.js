@@ -47,11 +47,15 @@ async function registrar(req, res, next) {
 /** POST /auditoria/recuperacion/solicitar — RF-27. */
 async function solicitarRecuperacion(req, res, next) {
   try {
-    const datos = await solicitarToken(req.body?.correo);
-    if (!datos) {
-      return res.json(new ApiResponse(null, 'Si el correo existe, se envio el token'));
-    }
-    res.json(new ApiResponse(datos, 'Token generado'));
+    await solicitarToken(req.body?.correo);
+    res
+      .status(202)
+      .json(
+        new ApiResponse(
+          null,
+          'Si el correo existe, se enviaron instrucciones de recuperacion'
+        )
+      );
   } catch (err) {
     next(traducirErrorMongoose(err, { entidad: 'token' }));
   }

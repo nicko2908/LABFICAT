@@ -134,8 +134,8 @@ async function crearEscenario({ tipoCliente = 'EXTERNO', pagar = true } = {}) {
     });
     const soporte = await cargarSoportePago({
       cuponId: generado._id,
-      rutaArchivo: 'pagos/soporte.pdf',
-      formato: 'PDF',
+      referenciaExterna: 'OP-MUESTRA',
+      observaciones: 'Pago de prueba para muestra',
       usuarioId: usuario._id,
     });
     await validarSoportePago({

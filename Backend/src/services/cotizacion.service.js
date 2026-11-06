@@ -528,6 +528,17 @@ async function decidirCotizacion({
       }
       cambios.firma_ruta = firma.ruta;
       cambios.firma_hash = firma.hash || null;
+      if (firma.bucket) {
+        cambios.firma = {
+          proveedor: firma.proveedor || 'r2',
+          bucket: firma.bucket,
+          key: firma.key || firma.ruta,
+          content_type: firma.content_type || 'image/png',
+          bytes: firma.bytes ?? null,
+          hash: firma.hash || null,
+          nombre_original: firma.nombre_original || null,
+        };
+      }
       cambios.firma_fecha = new Date();
       cambios.firma_ip = firmaIp || null;
       cambios.motivo_rechazo = null;
@@ -638,9 +649,11 @@ async function obtenerPorId(id) {
 async function obtenerFirma(id) {
   const doc = await Cotizacion.findById(id);
   if (!doc) throw ApiError.notFound('Cotizacion no encontrada');
-  if (!doc.firma_ruta) throw ApiError.notFound('Esta cotizacion no tiene firma registrada');
 
-  const buffer = await descargarFirma(doc.firma_ruta);
+  const ruta = doc.firma_ruta || doc.firma?.key;
+  if (!ruta) throw ApiError.notFound('Esta cotizacion no tiene firma registrada');
+
+  const buffer = await descargarFirma(ruta);
   return { doc, buffer };
 }
 
