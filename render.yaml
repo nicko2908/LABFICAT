@@ -1,0 +1,87 @@
+# Blueprint de Render para LABFICAT.
+#
+# Crea un Web Service Node para el backend.
+# Las variables marcadas con `sync: false` se completan en el dashboard
+# de Render durante el primer despliegue.
+#
+# Documentacion: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: labficat-backend
+    runtime: node
+    plan: free
+    region: virginia
+    branch: dev
+    rootDir: Backend
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      # Entorno
+      - key: NODE_ENV
+        value: production
+      - key: API_PREFIX
+        value: /api/v1
+      - key: JWT_EXPIRES_IN
+        value: 8h
+
+      # Base de datos (MongoDB Atlas)
+      - key: MONGO_URI
+        sync: false
+
+      # JWT: Render genera un secreto seguro en el primer despliegue.
+      # Si se rota manualmente, actualizar en el dashboard.
+      - key: JWT_SECRET
+        generateValue: true
+
+      # CORS: dominio del frontend en produccion.
+      # Ejemplo: https://labficat-frontend.onrender.com
+      - key: CORS_ORIGIN
+        sync: false
+
+      # Cloudflare R2
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET
+        value: labficat
+      - key: R2_ENDPOINT
+        sync: false
+      - key: R2_REGION
+        value: auto
+      - key: R2_PRESIGN_EXPIRES
+        value: "300"
+
+      # Correo SMTP
+      - key: MAIL_HOST
+        sync: false
+      - key: MAIL_PORT
+        value: "587"
+      - key: MAIL_SECURE
+        value: "false"
+      - key: MAIL_USER
+        sync: false
+      - key: MAIL_PASS
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: MAIL_TO_PRODUCCION
+        sync: false
+
+      # Parametros de negocio
+      - key: CUPON_VIGENCIA_DIAS
+        value: "5"
+      - key: CUPON_UMBRAL_RECORDATORIO_DIAS
+        value: "5"
+      - key: TOKEN_RECUPERACION_MINUTOS
+        value: "30"
+      - key: RESPONSABLE_LABORATORIO
+        value: Responsable LABFICAT
+
+      # Jobs programados: dejar en false hasta implementar y validar los jobs.
+      - key: JOBS_ENABLED
+        value: "false"
