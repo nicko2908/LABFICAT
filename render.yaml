@@ -12,7 +12,7 @@ services:
     runtime: node
     plan: free
     region: virginia
-    branch: dev
+    branch: main
     rootDir: Backend
     buildCommand: npm ci
     startCommand: npm start
