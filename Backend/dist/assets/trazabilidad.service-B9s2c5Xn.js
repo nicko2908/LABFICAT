@@ -1,0 +1,1 @@
+import{c4 as i,c5 as s}from"./index-BM5JH0BW.js";const o=a=>s("/trazabilidad/seguimiento",a),e=a=>i(`/trazabilidad/muestra/${a}`),r=a=>s("/trazabilidad/validaciones",a),d=a=>i(`/trazabilidad/validaciones/orden/${a}`);export{d as h,e as l,o as r,r as v};

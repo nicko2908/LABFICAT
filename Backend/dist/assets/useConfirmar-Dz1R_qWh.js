@@ -1,0 +1,1 @@
+import{an as l}from"./index-BM5JH0BW.js";function u(){const e=l();return{confirmar:({titulo:a,mensaje:n,textoOk:o="Confirmar",color:t="primary"})=>new Promise(r=>{e.dialog({title:a,message:n,ok:{label:o,color:t,unelevated:!0},cancel:{label:"Cancelar",flat:!0,color:"grey-8"},persistent:!0}).onOk(()=>r(!0)).onCancel(()=>r(!1))})}}export{u};

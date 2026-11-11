@@ -1,0 +1,1 @@
+import{c4 as a,c5 as e,c6 as t,c7 as r}from"./index-BM5JH0BW.js";const n=(s={})=>a("/clientes",{params:s}),o=s=>a(`/clientes/${s}`),l=s=>e("/clientes",s),p=(s,c)=>r(`/clientes/${s}`,c),v=s=>t(`/clientes/${s}/desactivar`),$=s=>t(`/clientes/${s}/reactivar`);export{p as a,l as c,v as d,n as l,o,$ as r};
