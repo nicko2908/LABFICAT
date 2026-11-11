@@ -40,9 +40,9 @@ export default defineConfig({
   },
 
   build: {
-    // El build de produccion se deja dentro de Backend/dist para que Express
+    // El build de produccion se deja dentro de Backend/public para que Express
     // lo sirva en el mismo origen que la API (Render: un solo Web Service).
-    outDir: "../Backend/dist",
+    outDir: "../Backend/public",
     emptyOutDir: true,
   },
 });
