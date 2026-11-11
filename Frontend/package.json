@@ -1,0 +1,27 @@
+{
+  "name": "labficat-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Frontend de LABFICAT: Vue 3 + Quasar + Vue Router + Pinia con estructura por responsabilidad.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@quasar/extras": "^1.16.17",
+    "axios": "^1.7.9",
+    "pinia": "^3.0.4",
+    "pinia-plugin-persistedstate": "^4.7.1",
+    "quasar": "^2.17.7",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@quasar/vite-plugin": "^1.9.0",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "sass-embedded": "^1.80.6",
+    "vite": "^6.0.7"
+  }
+}
