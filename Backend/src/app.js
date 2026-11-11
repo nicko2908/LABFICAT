@@ -24,8 +24,8 @@ import auditar from './middlewares/audit.middleware.js';
 const app = express();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// Build de Vite (frontend) generado en Backend/dist por `npm run build`.
-const DIST_FRONTEND = path.resolve(__dirname, '..', 'dist');
+// Build de Vite (frontend) generado en Backend/public por `npm run build`.
+const DIST_FRONTEND = path.resolve(__dirname, '..', 'public');
 const INDEX_FRONTEND = path.join(DIST_FRONTEND, 'index.html');
 const HAY_FRONTEND = fs.existsSync(INDEX_FRONTEND);
 
@@ -100,7 +100,7 @@ app.use(
 app.use(auditar);
 app.use(env.apiPrefix, routes);
 
-// Frontend compilado (Vite -> Backend/dist) servido por el mismo backend.
+// Frontend compilado (Vite -> Backend/public) servido por el mismo backend.
 // En desarrollo, si no existe el build, se ignora y se usa Vite en :5173.
 if (HAY_FRONTEND) {
   app.use(

@@ -32,16 +32,16 @@ npm start
 
 ## Frontend integrado
 
-En produccion el backend puede servir el frontend compilado desde `Backend/dist`:
+En produccion el backend puede servir el frontend compilado desde `Backend/public`:
 
 ```bash
 cd ../Frontend
-npm run build     # genera ../Backend/dist
+npm run build     # genera ../Backend/public
 cd ../Backend
 npm start         # http://localhost:3000
 ```
 
-Si `Backend/dist/index.html` no existe, el backend funciona solo como API y las
+Si `Backend/public/index.html` no existe, el backend funciona solo como API y las
 rutas no-API responden 404 JSON. En desarrollo se recomienda seguir usando Vite
 (`Frontend: npm run dev`) y dejar el backend en `npm run dev`.
 
