@@ -26,6 +26,28 @@ VITE_APP_TITULO=LABFICAT
 
 El backend solo permite CORS desde `http://localhost:5173` (ver `CORS_ORIGIN`).
 
+## Compilación para producción
+
+```bash
+cd Frontend
+npm run build
+```
+
+El build se genera directamente en **`Backend/dist`** (configurado en
+`vite.config.js`). El backend lo sirve en el mismo origen que la API:
+
+```text
+http://localhost:3000/          -> Backend/dist/index.html
+http://localhost:3000/assets/   -> JS/CSS del frontend
+http://localhost:3000/api/v1/   -> API
+```
+
+- `.env.production` define `VITE_API_URL=/api/v1`, así que el frontend llama a la
+  API en el mismo dominio (no queda `localhost` en el bundle).
+- El backend solo sirve el frontend si `Backend/dist/index.html` existe.
+- Después de compilar, reinicia el backend o vuelve a desplegarlo.
+- Para desarrollo sigue usando `npm run dev` en el frontend (`http://localhost:5173`).
+
 ## Estructura
 
 ```text

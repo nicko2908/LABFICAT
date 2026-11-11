@@ -7,6 +7,9 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import swaggerUi from 'swagger-ui-express';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import env from './config/env.js';
 import openapi from './docs/openapi.js';
@@ -19,6 +22,16 @@ import errorHandler from './middlewares/error.middleware.js';
 import auditar from './middlewares/audit.middleware.js';
 
 const app = express();
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Build de Vite (frontend) generado en Backend/dist por `npm run build`.
+const DIST_FRONTEND = path.resolve(__dirname, '..', 'dist');
+const INDEX_FRONTEND = path.join(DIST_FRONTEND, 'index.html');
+const HAY_FRONTEND = fs.existsSync(INDEX_FRONTEND);
+
+// Render (y la mayoria de PaaS) termina TLS en un proxy: confiar en el primer
+// salto para que req.ip sea la IP real del cliente y no la del proxy.
+if (env.nodeEnv === 'production') app.set('trust proxy', 1);
 
 const origenesPermitidos = String(env.corsOrigin || '*')
   .split(',')
@@ -35,7 +48,8 @@ app.use(
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'", "'unsafe-inline'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
         imgSrc: ["'self'", 'data:'],
         connectSrc: ["'self'"],
       },
@@ -85,6 +99,33 @@ app.use(
 // por el middleware de autenticacion del modulo correspondiente.
 app.use(auditar);
 app.use(env.apiPrefix, routes);
+
+// Frontend compilado (Vite -> Backend/dist) servido por el mismo backend.
+// En desarrollo, si no existe el build, se ignora y se usa Vite en :5173.
+if (HAY_FRONTEND) {
+  app.use(
+    express.static(DIST_FRONTEND, {
+      index: false,
+      maxAge: '1h',
+    })
+  );
+
+  // Fallback de la SPA. Con createWebHashHistory casi todo pasa por `/`, pero
+  // esto cubre rutas directas sin tocar la API ni los assets.
+  app.get(/.*/, (req, res, next) => {
+    if (req.method !== 'GET') return next();
+    if (req.path === '/health' || req.path.startsWith('/api/')) return next();
+    if (req.path.startsWith('/assets/')) return next();
+    // Solo devolver la SPA si el navegador espera HTML; un asset o una imagen
+    // faltante debe seguir al 404 JSON, no recibir index.html.
+    if (!req.accepts('html')) return next();
+
+    res.setHeader('Cache-Control', 'no-cache');
+    return res.sendFile(INDEX_FRONTEND, (error) => {
+      if (error) next(error);
+    });
+  });
+}
 
 // Manejo de rutas no encontradas y errores (siempre al final)
 app.use(notFound);

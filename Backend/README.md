@@ -30,6 +30,21 @@ npm run dev
 npm start
 ```
 
+## Frontend integrado
+
+En produccion el backend puede servir el frontend compilado desde `Backend/dist`:
+
+```bash
+cd ../Frontend
+npm run build     # genera ../Backend/dist
+cd ../Backend
+npm start         # http://localhost:3000
+```
+
+Si `Backend/dist/index.html` no existe, el backend funciona solo como API y las
+rutas no-API responden 404 JSON. En desarrollo se recomienda seguir usando Vite
+(`Frontend: npm run dev`) y dejar el backend en `npm run dev`.
+
 ## Variables de entorno
 
 - **Obligatorias:** `MONGO_URI` y `JWT_SECRET`. Si faltan, el backend no arranca.

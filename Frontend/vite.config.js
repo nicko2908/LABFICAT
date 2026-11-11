@@ -40,10 +40,9 @@ export default defineConfig({
   },
 
   build: {
-    // El backend Express no sirve archivos estaticos; el frontend se publica
-    // por separado. Si mas adelante se agrega express.static, cambiar a
-    // ../Backend/public.
-    outDir: "dist",
+    // El build de produccion se deja dentro de Backend/dist para que Express
+    // lo sirva en el mismo origen que la API (Render: un solo Web Service).
+    outDir: "../Backend/dist",
     emptyOutDir: true,
   },
 });
