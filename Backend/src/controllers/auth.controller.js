@@ -14,10 +14,26 @@ import {
   cambiarContrasena as actualizarContrasena,
 } from '../services/auth.service.js';
 
+/**
+ * Deja el usuario en `req.usuario` para que el middleware de auditoria pueda
+ * registrar el acceso (login/registro). En rutas protegidas ya lo hace
+ * auth.middleware; aqui solo aplica a las rutas publicas de autenticacion.
+ */
+function marcarActorAuditoria(req, usuario) {
+  if (!usuario) return;
+  const id = String(usuario._id);
+  req.usuario = {
+    id,
+    sub: id,
+    rol: usuario.rol?.nombre || usuario.rol || null,
+  };
+}
+
 /** POST /auth/registro — RF-01 / RF-02. */
 async function registrar(req, res, next) {
   try {
     const datos = await registrarUsuario(req.body || {});
+    marcarActorAuditoria(req, datos.usuario);
     res.status(201).json(new ApiResponse(datos, 'Registro exitoso'));
   } catch (err) {
     next(traducirErrorMongoose(err, { entidad: 'usuario' }));
@@ -28,6 +44,7 @@ async function registrar(req, res, next) {
 async function login(req, res, next) {
   try {
     const datos = await iniciarSesion(req.body || {});
+    marcarActorAuditoria(req, datos.usuario);
     res.json(new ApiResponse(datos, 'Acceso concedido'));
   } catch (err) {
     next(traducirErrorMongoose(err, { entidad: 'usuario' }));

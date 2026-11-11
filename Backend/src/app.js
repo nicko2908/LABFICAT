@@ -16,6 +16,7 @@ import './models/index.js';
 import routes from './routes/index.js';
 import notFound from './middlewares/notFound.middleware.js';
 import errorHandler from './middlewares/error.middleware.js';
+import auditar from './middlewares/audit.middleware.js';
 
 const app = express();
 
@@ -80,6 +81,9 @@ app.use(
 );
 
 // Rutas de la API (versionadas)
+// La auditoria escucha el evento `finish`, cuando req.usuario ya fue adjuntado
+// por el middleware de autenticacion del modulo correspondiente.
+app.use(auditar);
 app.use(env.apiPrefix, routes);
 
 // Manejo de rutas no encontradas y errores (siempre al final)

@@ -1,0 +1,36 @@
+// =============================================================================
+// /styles/variables.scss
+// Variables de marca que Quasar compila ANTES de sus propios estilos.
+// Solo valores, nunca selectores.
+// =============================================================================
+
+// --- Colores de marca de Quasar ---------------------------------------------
+$primary: #007832; // verde oscuro SENA: header, botones, foco
+$secondary: #00304d; // azul oscuro SENA
+$accent: #71277a; // violeta SENA
+$positive: #39a900; // verde SENA
+$negative: #c10015;
+$info: #50e5f9; // azul claro SENA
+$warning: #fdc300; // amarillo SENA
+
+$dark: #001a2b;
+$dark-page: #0b1117;
+
+// --- Superficies y neutros --------------------------------------------------
+$surface-canvas: #f3f4f6;
+$surface-panel: #ffffff;
+$surface-nested: #f9fafb;
+$color-border: #e5e7eb;
+$color-text: #00304d;
+$color-text-strong: #001a2b;
+$color-slate: #4b5563;
+$color-silver: #9ca3af;
+
+// --- Radios -----------------------------------------------------------------
+$radius-inputs: 8px;
+$radius-buttons: 12px;
+$radius-cards: 8px;
+$radius-dialog: 12px;
+
+// --- Layout -----------------------------------------------------------------
+$page-max-width: 1200px;

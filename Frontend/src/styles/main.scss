@@ -1,0 +1,536 @@
+// =============================================================================
+// /styles/main.scss
+// Tokens y estilos globales de LABFICAT. Se importa una sola vez en main.js.
+// =============================================================================
+
+@use "./variables" as *;
+
+// =============================================================================
+// 1. TOKENS (los mismos de desing.md)
+// =============================================================================
+:root {
+  --sena-verde: #39a900;
+  --sena-verde-oscuro: #007832;
+  --sena-azul-oscuro: #00304d;
+  --sena-azul-claro: #50e5f9;
+  --sena-violeta: #71277a;
+  --sena-amarillo: #fdc300;
+
+  --color-accent: var(--sena-verde);
+  --color-accent-strong: var(--sena-verde-oscuro);
+  --color-accent-secondary: var(--sena-azul-claro);
+
+  --color-text: var(--sena-azul-oscuro);
+  --color-text-strong: #001a2b;
+  --color-slate: #4b5563;
+  --color-silver: #9ca3af;
+
+  --color-fog: #d9dbda;
+  --color-mist: #e5e7eb;
+  --color-paper: #ffffff;
+  --color-bone: #f9fafb;
+  --color-pebble: #f3f4f6;
+
+  --gradient-sunset: linear-gradient(to right, var(--sena-amarillo), var(--sena-verde));
+  --gradient-bloom: linear-gradient(to right, var(--sena-violeta), var(--sena-azul-claro));
+
+  --font-plus-jakarta-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-google-sans-code: "Google Sans Code", ui-monospace, SFMono-Regular, Menlo, Monaco,
+    Consolas, monospace;
+
+  --text-caption: 12px;
+  --leading-caption: 1.71;
+  --tracking-caption: 0.3px;
+  --text-body-sm: 14px;
+  --leading-body-sm: 1.56;
+  --tracking-body-sm: 0.35px;
+  --text-body: 16px;
+  --leading-body: 1.5;
+  --tracking-body: 0.4px;
+  --text-subheading: 18px;
+  --leading-subheading: 1.43;
+  --tracking-subheading: 0px;
+  --text-heading-sm: 36px;
+  --leading-heading-sm: 1.11;
+  --tracking-heading-sm: -0.9px;
+  --text-heading: 48px;
+  --leading-heading: 1.11;
+  --tracking-heading: -1.2px;
+  --text-display: 60px;
+  --leading-display: 1;
+  --tracking-display: -1.5px;
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --spacing-unit: 8px;
+  --spacing-8: 8px;
+  --spacing-16: 16px;
+  --spacing-24: 24px;
+  --spacing-32: 32px;
+  --spacing-40: 40px;
+  --spacing-48: 48px;
+  --spacing-64: 64px;
+  --spacing-96: 96px;
+  --spacing-128: 128px;
+  --spacing-192: 192px;
+  --spacing-224: 224px;
+
+  --page-max-width: 1200px;
+  --section-gap: 80px;
+  --card-padding: 24px;
+  --element-gap: 24px;
+
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-3xl: 24px;
+  --radius-full: 9999px;
+  --radius-tags: 4px;
+  --radius-cards: 8px;
+  --radius-icons: 9999px;
+  --radius-pills: 9999px;
+  --radius-inputs: 8px;
+  --radius-buttons: 12px;
+
+  --surface-canvas: #f3f4f6;
+  --surface-panel: #ffffff;
+  --surface-nested: #f9fafb;
+}
+
+// =============================================================================
+// 2. BASE
+// =============================================================================
+html,
+body {
+  background: var(--surface-canvas);
+  color: var(--color-text);
+  font-family: var(--font-plus-jakarta-sans);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  letter-spacing: var(--tracking-body);
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code,
+pre,
+kbd,
+samp,
+.mono {
+  font-family: var(--font-google-sans-code);
+}
+
+// =============================================================================
+// 3. BOTONES
+// =============================================================================
+.btn-primary {
+  background: var(--color-accent-strong);
+  color: var(--color-paper);
+  font: var(--font-weight-semibold) var(--text-body) / 1 var(--font-plus-jakarta-sans);
+  padding: 12px 24px;
+  border: 0;
+  border-radius: var(--radius-buttons);
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+
+.btn-primary:hover {
+  background: var(--color-accent);
+}
+
+.btn-outline {
+  background: var(--color-paper);
+  color: var(--color-accent-strong);
+  border: 1px solid var(--color-accent-strong);
+  border-radius: var(--radius-buttons);
+  padding: 8px 20px;
+  cursor: pointer;
+}
+
+.eyebrow {
+  color: var(--color-accent-strong);
+  font: var(--font-weight-semibold) var(--text-body-sm) var(--font-plus-jakarta-sans);
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+}
+
+.input:focus {
+  border-color: var(--color-accent);
+  outline: none;
+  box-shadow: none;
+}
+
+// =============================================================================
+// 4. MARCA
+// =============================================================================
+.marca-logo {
+  display: block;
+  width: auto;
+  object-fit: contain;
+}
+
+.marca-encabezado {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.marca-encabezado__texto {
+  line-height: 1.2;
+}
+
+.marca-encabezado__nombre {
+  color: var(--color-text-strong);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.2px;
+}
+
+.marca-encabezado__detalle {
+  color: var(--color-slate);
+  font-size: var(--text-caption);
+}
+
+// =============================================================================
+// 5. ESTRUCTURA
+// =============================================================================
+.contenedor-app {
+  width: 100%;
+  max-width: var(--page-max-width);
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+.titulo-vista {
+  font-size: clamp(28px, 4vw, var(--text-heading-sm));
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--tracking-heading-sm);
+  line-height: var(--leading-heading-sm);
+  color: var(--color-text-strong);
+  margin: 0;
+}
+
+.linea-titulo {
+  width: 83%;
+  height: 3px;
+  border: 0;
+  margin: 12px 0 0;
+  border-radius: var(--radius-full);
+  background: linear-gradient(to right, var(--color-accent-strong), var(--color-accent));
+}
+
+.texto-suave {
+  color: var(--color-slate);
+}
+
+.sin-decoracion {
+  text-decoration: none;
+  color: inherit;
+}
+
+// =============================================================================
+// 6. TARJETAS Y SECTION BOX
+// =============================================================================
+.tarjeta {
+  border-radius: var(--radius-cards);
+  border: 1px solid var(--color-mist);
+  background: var(--surface-panel);
+  box-shadow: none;
+}
+
+.tarjeta-hover {
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.tarjeta-hover:hover {
+  background: var(--color-bone);
+  border-color: var(--color-accent);
+}
+
+.section-box {
+  border: 1.5px solid color-mix(in srgb, var(--color-accent) 32%, transparent);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-panel);
+}
+
+.section-box__title {
+  background: color-mix(in srgb, var(--color-accent) 10%, white);
+  color: var(--color-accent-strong);
+  font-size: var(--text-body-sm);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 1.1px;
+  padding: 11px 16px;
+  border-bottom: 3px solid var(--color-accent);
+  display: flex;
+  align-items: center;
+}
+
+.data-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-strong);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 5px;
+  padding-left: 8px;
+  border-left: 3px solid var(--color-accent);
+}
+
+.data-value {
+  font-size: var(--text-body);
+  color: var(--color-text-strong);
+  line-height: 1.5;
+}
+
+// =============================================================================
+// 7. INPUTS, BOTONES Y TABLAS DE QUASAR
+// =============================================================================
+.q-field--outlined .q-field__control {
+  border-radius: var(--radius-inputs);
+}
+
+.q-btn {
+  border-radius: var(--radius-buttons);
+  text-transform: none;
+  font-weight: var(--font-weight-semibold);
+}
+
+.q-card {
+  border-radius: var(--radius-cards);
+}
+
+.q-dialog .q-card {
+  border-radius: var(--radius-dialog);
+}
+
+.q-table th {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.my-sticky-header-table {
+  height: 60vh;
+
+  .q-table__top,
+  .q-table__bottom,
+  thead tr:first-child th {
+    background-color: var(--surface-panel);
+    color: var(--color-text);
+    font-weight: var(--font-weight-semibold);
+    font-size: 13px;
+  }
+
+  tbody td {
+    font-size: 14px;
+  }
+
+  thead tr th {
+    position: sticky;
+    z-index: 1;
+  }
+
+  thead tr:first-child th {
+    top: 0;
+  }
+
+  &.q-table--loading thead tr:last-child th {
+    top: 48px;
+  }
+}
+
+.empty-title {
+  font-size: 15px;
+  color: var(--color-silver);
+}
+
+// =============================================================================
+// 8. AUTH
+// =============================================================================
+.auth-page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 460px);
+  background: var(--surface-canvas);
+}
+
+.auth-panel {
+  display: contents;
+}
+
+.auth-marca {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-accent-strong);
+  color: var(--color-paper);
+  display: flex;
+  align-items: center;
+  padding: 48px;
+}
+
+.auth-marca::before,
+.auth-marca::after {
+  content: "";
+  position: absolute;
+  border-radius: 9999px;
+  opacity: 0.18;
+}
+
+.auth-marca::before {
+  width: 420px;
+  height: 420px;
+  background: var(--sena-amarillo);
+  top: -120px;
+  right: -120px;
+}
+
+.auth-marca::after {
+  width: 320px;
+  height: 320px;
+  background: var(--sena-azul-claro);
+  bottom: -100px;
+  left: -80px;
+}
+
+.auth-marca__contenido {
+  position: relative;
+  z-index: 1;
+  max-width: 520px;
+}
+
+.auth-marca__eyebrow {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.auth-marca__titulo {
+  font-size: clamp(36px, 5vw, 60px);
+  line-height: 1.05;
+  letter-spacing: -1.5px;
+  font-weight: var(--font-weight-bold);
+  margin: 8px 0 16px;
+}
+
+.auth-marca__texto {
+  color: rgba(255, 255, 255, 0.82);
+  max-width: 460px;
+}
+
+.auth-marca__puntos {
+  display: grid;
+  gap: 10px;
+  margin-top: 28px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.auth-formulario {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+  background: var(--surface-canvas);
+}
+
+.auth-formulario__caja {
+  width: 100%;
+  max-width: 420px;
+}
+
+.auth-formulario__marca {
+  display: flex;
+  justify-content: center;
+}
+
+.auth-titulo {
+  font-size: 28px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-strong);
+  margin: 0 0 4px;
+}
+
+.registro-page {
+  min-height: 100vh;
+  background: var(--surface-canvas);
+  padding: 32px 16px 56px;
+}
+
+.registro-caja {
+  width: 100%;
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+@media (max-width: 900px) {
+  .auth-page {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-marca {
+    min-height: 260px;
+    padding: 32px 24px;
+  }
+
+  .auth-marca__titulo {
+    font-size: 36px;
+  }
+}
+
+// =============================================================================
+// 9. DASHBOARD / STAT CARDS
+// =============================================================================
+.stat-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px;
+  height: 100%;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-1px);
+  border-color: var(--color-accent);
+}
+
+.stat-card__valor {
+  font-size: 28px;
+  font-weight: var(--font-weight-bold);
+  line-height: 1.1;
+  color: var(--color-text-strong);
+}
+
+.stat-card__etiqueta {
+  font-size: var(--text-body-sm);
+  color: var(--color-slate);
+}
+
+.stat-card__detalle {
+  font-size: var(--text-caption);
+  color: var(--color-silver);
+  margin-top: 4px;
+}
+
+// =============================================================================
+// 10. SCROLLBARS
+// =============================================================================
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-fog);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-silver);
+}
